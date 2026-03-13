@@ -4,20 +4,22 @@ export default function CategoryPreview() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {CATEGORY_META.map((cat) => (
-        <div key={cat.id} className="pip-panel p-4 group cursor-default transition-all hover:shadow-[0_0_20px_rgba(89,255,89,0.1)]">
-          {/* Fallout terminal icon */}
+        <div key={cat.id} className="pip-panel p-4 group cursor-default transition-all hover:shadow-[0_0_20px_rgba(89,255,89,0.08)]">
+          {/* Category icon */}
           <div
-            className="font-fallout text-4xl leading-none mb-3 select-none"
+            className="text-3xl leading-none mb-3 select-none flex items-center justify-center rounded-lg"
             style={{
-              color: "var(--pip-bright)",
-              textShadow: "0 0 6px var(--pip-green), 0 0 18px var(--pip-green)",
+              width: 48, height: 48,
+              background: `${cat.color}18`,
+              border: `1.5px solid ${cat.color}55`,
+              boxShadow: `0 0 12px ${cat.color}22`,
             }}
           >
             {cat.icon}
           </div>
           <div
-            className="text-xs font-fallout uppercase tracking-[0.12em] mb-1"
-            style={{ color: "var(--pip-bright)" }}
+            className="text-xs uppercase tracking-[0.12em] mb-1 font-mono"
+            style={{ color: cat.color }}
           >
             {cat.label}
           </div>

@@ -209,6 +209,9 @@ export default function DashboardPage() {
             </div>
           ) : guide.content ? (
             <>
+              {/* Summary */}
+              <GuideSummary user={user} content={guide.content} />
+
               {/* View toggle */}
               <div className="flex gap-2 mb-4">
                 {(["accordion", "timeline"] as const).map((v) => (
@@ -317,6 +320,36 @@ export default function DashboardPage() {
   );
 }
 
+const HOUSING_PT: Record<string, string> = {
+  apartment: "apartamento", house: "moradia", rural: "zona rural", mobile: "habitação móvel",
+};
+
+function GuideSummary({ user, content }: {
+  user: { household_size?: number; housing_type?: string; country_code?: string };
+  content: Record<string, GuideSection>;
+}) {
+  const total = Object.values(content).reduce((s, sec) => s + (sec?.items?.length ?? 0), 0);
+  const housing = HOUSING_PT[user.housing_type ?? ""] || user.housing_type || "habitação";
+  const n = user.household_size ?? 1;
+
+  return (
+    <div className="mb-5 px-4 py-3 rounded-lg border"
+      style={{ background: "#060e06", borderColor: "#1a3a1a", borderLeft: "3px solid #22c55e" }}>
+      <p className="text-xs leading-relaxed" style={{ color: "#a3c9a3" }}>
+        Guia para{" "}
+        <span style={{ color: "#59ff59" }}>{n} {n === 1 ? "pessoa" : "pessoas"}</span>{" "}
+        em <span style={{ color: "#59ff59" }}>{housing}</span>
+        {user.country_code ? <> — <span style={{ color: "#59ff59" }}>{user.country_code}</span></> : ""}.{" "}
+        <span style={{ color: "#6b9e6b" }}>
+          {total} acções organizadas em 4 fases: sobrevivência imediata (7 dias), estabilização (30 dias),
+          autonomia (6 meses) e resiliência a longo prazo (1 ano).
+          Marca cada item à medida que estás preparado.
+        </span>
+      </p>
+    </div>
+  );
+}
+
 function GuideAccordion({ content, checked, toggle }: {
   content: Record<string, GuideSection>;
   checked: Set<string>;
@@ -338,10 +371,13 @@ function GuideAccordion({ content, checked, toggle }: {
             <summary className="px-4 py-3 cursor-pointer text-sm flex items-center gap-3 uppercase tracking-wider select-none"
               style={{ color: "var(--pip-green)" }}>
               <span style={{
-                background: color, color: "#fff", borderRadius: "50%",
-                width: 22, height: 22, minWidth: 22,
+                background: `${color}22`, border: `1.5px solid ${color}88`,
+                borderRadius: 8,
+                width: 36, height: 36, minWidth: 36,
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, boxShadow: `0 0 8px ${color}66`, opacity: 0.85,
+                fontSize: 20,
+                boxShadow: `0 0 10px ${color}33`,
+                opacity: 0.85,
               }} className="group-open:opacity-100 transition-opacity">
                 {meta?.icon}
               </span>
@@ -498,13 +534,14 @@ function GuideTimeline({ content, checked, toggle }: {
 
                 {/* Category icon badge */}
                 <div style={{
-                  background: done ? "#333" : item.catColor,
-                  color: "#fff",
-                  borderRadius: "50%",
-                  width: 26, height: 26, minWidth: 26,
+                  background: done ? "#1a1a1a" : `${item.catColor}22`,
+                  border: `1.5px solid ${done ? "#333" : item.catColor + "88"}`,
+                  borderRadius: 8,
+                  width: 36, height: 36, minWidth: 36,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12,
-                  boxShadow: done ? "none" : `0 0 8px ${item.catColor}55`,
+                  fontSize: done ? 14 : 20,
+                  color: done ? "#555" : "inherit",
+                  boxShadow: done ? "none" : `0 0 10px ${item.catColor}33`,
                   flexShrink: 0,
                   transition: "all 0.2s",
                 }}>
