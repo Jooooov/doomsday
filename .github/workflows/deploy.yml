@@ -1,8 +1,11 @@
 name: Deploy to Production
 
 on:
-  push:
-    branches: [main]
+  # Disabled until VPS_HOST / VPS_USER / VPS_SSH_KEY secrets are configured.
+  # Re-enable by changing 'workflow_dispatch' back to:
+  #   push:
+  #     branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
