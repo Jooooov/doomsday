@@ -8,6 +8,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        fallout: ["var(--font-fallout)", "VT323", "Courier New", "monospace"],
+      },
       colors: {
         risk: {
           green: "#22c55e",

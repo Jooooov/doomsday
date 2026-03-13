@@ -3,17 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0a0a0a;
-  --surface: #111111;
-  --border: #222222;
-  --text: #f0f0f0;
-  --muted: #888888;
+  --bg: #080808;
+  --surface: #0d0d0d;
+  --border: #1f1f1f;
+  --text: #d4f5d4;       /* terminal green-white */
+  --muted: #4a7a4a;
+  --accent: #4ade80;     /* green-400 */
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-fallout), "VT323", "Courier New", monospace;
+  letter-spacing: 0.02em;
 }
 
 @keyframes tick {
