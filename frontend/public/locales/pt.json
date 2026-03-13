@@ -1,0 +1,135 @@
+{
+  "app_name": "DOOMSDAY PREP",
+  "tagline": "TERMINAL DO SOBREVIVENTE",
+
+  "nav": {
+    "map": "MAPA",
+    "dashboard": "TERMINAL",
+    "profile": "PERFIL",
+    "logout": "SAIR",
+    "login": "ENTRAR",
+    "register": "REGISTAR"
+  },
+
+  "landing": {
+    "hero_title": "O TEMPO ESTÁ A ACABAR",
+    "hero_sub": "Segue o relógio do apocalipse em tempo real. O teu guia de sobrevivência personalizado está a um clique.",
+    "cta_title": "COMEÇA AGORA — É GRATUITO",
+    "countries_monitored": "{{n}} países monitorizados",
+    "scroll_hint": "Scroll → zoom · Arrasta → mover · Clica → detalhes",
+    "news_title": "ÚLTIMAS AMEAÇAS",
+    "categories_title": "OS 12 PROTOCOLOS DE SOBREVIVÊNCIA"
+  },
+
+  "clock": {
+    "seconds_to_midnight": "segundos para meia-noite",
+    "risk_green": "Baixo risco",
+    "risk_yellow": "Risco moderado",
+    "risk_orange": "Risco elevado",
+    "risk_red": "Risco crítico",
+    "no_data": "Sem dados",
+    "last_updated": "Última actualização há {{h}}h"
+  },
+
+  "dashboard": {
+    "title": "GUIA DE SOBREVIVÊNCIA",
+    "no_guide": "SEM GUIA GERADO",
+    "profile_incomplete": "Perfil incompleto. Completa o teu perfil antes de gerar o guia.",
+    "missing_fields": "Em falta: {{fields}}",
+    "complete_profile": "COMPLETAR PERFIL",
+    "generating": "COMPILANDO: {{cat}} ({{n}}/{{total}})",
+    "initializing": "INICIALIZANDO PROTOCOLO...",
+    "generate_btn": "COMPILAR GUIA DE SOBREVIVÊNCIA",
+    "items_count": "{{n}} ITENS",
+    "update_badge": "A actualizar...",
+    "limit_reached": "Limite de gerações atingido (20/hora). Tenta mais tarde.",
+    "partial_error": "Alguns conteúdos usaram modo de contingência.",
+    "conn_error": "Falha na ligação ao servidor."
+  },
+
+  "group": {
+    "title": "Grupo Familiar",
+    "members": "{{n}} membros",
+    "invite": "Convite: {{link}}",
+    "create_btn": "CRIAR GRUPO"
+  },
+
+  "checklist": {
+    "title": "Checklist Familiar"
+  },
+
+  "map_local": {
+    "title": "Recursos Locais",
+    "no_zip": "Adiciona o teu código postal no perfil para ver recursos locais.",
+    "update_profile": "ACTUALIZAR PERFIL",
+    "searching": "A pesquisar recursos próximos...",
+    "radius": "Raio 5km",
+    "cached": "Cache local"
+  },
+
+  "push": {
+    "on": "◉ Alertas activos",
+    "off": "○ Activar alertas",
+    "denied": "⊘ Notificações bloqueadas",
+    "loading": "A verificar..."
+  },
+
+  "privacy": {
+    "title": "Privacidade RGPD",
+    "export": "Exportar dados (JSON)",
+    "delete_btn": "ELIMINAR CONTA",
+    "delete_confirm": "Eliminar conta permanentemente?"
+  },
+
+  "auth": {
+    "login_title": "Autenticação de Sobrevivente",
+    "email_label": "Identificação (Email)",
+    "email_placeholder": "vault@dweller.pip",
+    "password_label": "Código de Acesso",
+    "login_btn": "ACEDER AO TERMINAL",
+    "login_loading": "VERIFICANDO...",
+    "no_account": "Sem conta?",
+    "register_link": "Registar sobrevivente",
+    "google_btn": "CONTINUAR COM GOOGLE",
+    "invalid_creds": "Credenciais inválidas",
+
+    "register_title": "Registar Sobrevivente",
+    "name_label": "Nome de Código",
+    "name_placeholder": "Survivor_001",
+    "register_btn": "CRIAR ACESSO",
+    "register_loading": "A criar...",
+    "already_account": "Já tens conta?",
+    "login_link": "Entrar"
+  },
+
+  "profile": {
+    "title": "PERFIL DO SOBREVIVENTE",
+    "country_label": "País",
+    "zip_label": "Código Postal",
+    "zip_placeholder": "1000-001",
+    "household_label": "Agregado familiar",
+    "housing_label": "Tipo de habitação",
+    "budget_label": "Orçamento de preparação",
+    "save_btn": "GUARDAR PERFIL",
+    "saved": "Perfil actualizado.",
+    "lang_label": "Idioma da interface"
+  },
+
+  "housing": {
+    "apartment": "Apartamento",
+    "house": "Moradia",
+    "rural": "Rural / Quinta",
+    "other": "Outro"
+  },
+
+  "budget": {
+    "low": "Baixo (< €500)",
+    "medium": "Médio (€500–2000)",
+    "high": "Alto (> €2000)"
+  },
+
+  "top5": {
+    "title": "TOP 5 PRIORIDADES",
+    "subtitle": "Para o teu país agora"
+  }
+}

@@ -5,8 +5,10 @@ import type { UserProfile, CountryScore } from "./api";
 interface AuthState {
   token: string | null;
   user: UserProfile | null;
+  _hydrated: boolean;
   setAuth: (token: string, user: UserProfile) => void;
   clearAuth: () => void;
+  setHydrated: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -14,6 +16,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
+      _hydrated: false,
       setAuth: (token, user) => {
         if (typeof window !== "undefined") localStorage.setItem("doomsday_token", token);
         set({ token, user });
@@ -22,8 +25,14 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== "undefined") localStorage.removeItem("doomsday_token");
         set({ token: null, user: null });
       },
+      setHydrated: () => set({ _hydrated: true }),
     }),
-    { name: "doomsday-auth" }
+    {
+      name: "doomsday-auth",
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated();
+      },
+    }
   )
 );
 

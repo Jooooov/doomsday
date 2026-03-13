@@ -15,15 +15,11 @@ export default function DoomsdayClock({ secondsToMidnight, riskLevel, size = 200
   const cy = size / 2;
   const r = size * 0.45;
 
-  // Clock hand angle — map [300s, 0s] to the last 5 minutes before midnight
-  // so the hand stays visually in the 11:55–12:00 zone (alarming range)
   const angle = useMemo(() => {
-    const windowSeconds = 300; // show last 5 minutes on the face
+    const windowSeconds = 300;
     const clamped = Math.min(secondsToMidnight, windowSeconds);
-    // progress=1 → midnight (12:00), progress=0 → 11:55
     const progress = 1 - clamped / windowSeconds;
-    // 11:55 = -30° from 12:00 → start angle = -90° - 30° = -120°
-    return -120 + progress * 30; // sweeps 30° (5 min worth)
+    return -120 + progress * 30;
   }, [secondsToMidnight]);
 
   const handLength = r * 0.78;

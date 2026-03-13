@@ -1,0 +1,135 @@
+{
+  "app_name": "DOOMSDAY PREP",
+  "tagline": "SURVIVOR TERMINAL",
+
+  "nav": {
+    "map": "MAP",
+    "dashboard": "TERMINAL",
+    "profile": "PROFILE",
+    "logout": "LOGOUT",
+    "login": "LOGIN",
+    "register": "REGISTER"
+  },
+
+  "landing": {
+    "hero_title": "TIME IS RUNNING OUT",
+    "hero_sub": "Track the doomsday clock in real time. Your personalised survival guide is one click away.",
+    "cta_title": "START NOW — IT'S FREE",
+    "countries_monitored": "{{n}} countries monitored",
+    "scroll_hint": "Scroll → zoom · Drag → pan · Click → details",
+    "news_title": "LATEST THREATS",
+    "categories_title": "THE 12 SURVIVAL PROTOCOLS"
+  },
+
+  "clock": {
+    "seconds_to_midnight": "seconds to midnight",
+    "risk_green": "Low risk",
+    "risk_yellow": "Moderate risk",
+    "risk_orange": "High risk",
+    "risk_red": "Critical risk",
+    "no_data": "No data",
+    "last_updated": "Last updated {{h}}h ago"
+  },
+
+  "dashboard": {
+    "title": "SURVIVAL GUIDE",
+    "no_guide": "NO GUIDE GENERATED",
+    "profile_incomplete": "Profile incomplete. Complete your profile before generating the guide.",
+    "missing_fields": "Missing: {{fields}}",
+    "complete_profile": "COMPLETE PROFILE",
+    "generating": "COMPILING: {{cat}} ({{n}}/{{total}})",
+    "initializing": "INITIALIZING PROTOCOL...",
+    "generate_btn": "COMPILE SURVIVAL GUIDE",
+    "items_count": "{{n}} ITEMS",
+    "update_badge": "Updating...",
+    "limit_reached": "Generation limit reached (20/hour). Try again later.",
+    "partial_error": "Some content used fallback mode.",
+    "conn_error": "Server connection failed."
+  },
+
+  "group": {
+    "title": "Family Group",
+    "members": "{{n}} members",
+    "invite": "Invite: {{link}}",
+    "create_btn": "CREATE GROUP"
+  },
+
+  "checklist": {
+    "title": "Family Checklist"
+  },
+
+  "map_local": {
+    "title": "Local Resources",
+    "no_zip": "Add your postal code in the profile to see local resources.",
+    "update_profile": "UPDATE PROFILE",
+    "searching": "Searching nearby resources...",
+    "radius": "5km radius",
+    "cached": "Local cache"
+  },
+
+  "push": {
+    "on": "◉ Alerts active",
+    "off": "○ Enable alerts",
+    "denied": "⊘ Notifications blocked",
+    "loading": "Checking..."
+  },
+
+  "privacy": {
+    "title": "GDPR Privacy",
+    "export": "Export data (JSON)",
+    "delete_btn": "DELETE ACCOUNT",
+    "delete_confirm": "Permanently delete account?"
+  },
+
+  "auth": {
+    "login_title": "Survivor Authentication",
+    "email_label": "Identification (Email)",
+    "email_placeholder": "vault@dweller.pip",
+    "password_label": "Access Code",
+    "login_btn": "ACCESS TERMINAL",
+    "login_loading": "VERIFYING...",
+    "no_account": "No account?",
+    "register_link": "Register survivor",
+    "google_btn": "CONTINUE WITH GOOGLE",
+    "invalid_creds": "Invalid credentials",
+
+    "register_title": "Register Survivor",
+    "name_label": "Code Name",
+    "name_placeholder": "Survivor_001",
+    "register_btn": "CREATE ACCESS",
+    "register_loading": "Creating...",
+    "already_account": "Already have an account?",
+    "login_link": "Login"
+  },
+
+  "profile": {
+    "title": "SURVIVOR PROFILE",
+    "country_label": "Country",
+    "zip_label": "Postal Code",
+    "zip_placeholder": "EC1A 1BB",
+    "household_label": "Household size",
+    "housing_label": "Housing type",
+    "budget_label": "Prep budget",
+    "save_btn": "SAVE PROFILE",
+    "saved": "Profile updated.",
+    "lang_label": "Interface language"
+  },
+
+  "housing": {
+    "apartment": "Apartment",
+    "house": "House",
+    "rural": "Rural / Farm",
+    "other": "Other"
+  },
+
+  "budget": {
+    "low": "Low (< €500)",
+    "medium": "Medium (€500–2000)",
+    "high": "High (> €2000)"
+  },
+
+  "top5": {
+    "title": "TOP 5 PRIORITIES",
+    "subtitle": "For your country right now"
+  }
+}

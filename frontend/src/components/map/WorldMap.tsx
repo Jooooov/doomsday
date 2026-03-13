@@ -73,6 +73,7 @@ export default function WorldMap() {
           zoom={pos.zoom} center={pos.coordinates}
           onMoveEnd={({coordinates,zoom}) => setPos({coordinates:coordinates as [number,number],zoom})}
           minZoom={1} maxZoom={8}
+          filterZoomEvent={(evt: Event) => evt.type === "wheel" ? (evt as WheelEvent).ctrlKey : true}
         >
           <Geographies geography={GEO_URL}>
             {({ geographies }) => geographies.map((geo) => {
@@ -123,7 +124,7 @@ export default function WorldMap() {
       </div>
 
       <p className="absolute top-3 right-3 text-[10px] text-gray-700 pointer-events-none">
-        Scroll → zoom · Arrasta → mover · Clica → detalhes
+        Ctrl+Scroll → zoom · Arrasta → mover · Clica → detalhes
       </p>
       <p className="absolute top-3 left-3 text-[10px] text-gray-600">
         {data?.countries.length ?? 0} países monitorizados

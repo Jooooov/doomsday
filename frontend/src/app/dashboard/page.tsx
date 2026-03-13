@@ -1,16 +1,31 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import dynamic from "next/dynamic";
 import useSWR from "swr";
 import { api, type GuideSection } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { CATEGORY_META } from "@/lib/categories";
+import PushToggle from "@/components/ui/PushToggle";
+
+const LocalMap = dynamic(() => import("@/components/map/LocalMap"), { ssr: false });
+
+const CATEGORY_PT: Record<string, string> = {
+  water: "Água", food: "Alimentação", shelter: "Abrigo", health: "Saúde",
+  communication: "Comunicação", evacuation: "Evacuação", energy: "Energia",
+  security: "Segurança", documentation: "Documentação", mental_health: "Saúde Mental",
+  armed_conflict: "Conflito Armado", family_coordination: "Coordenação Familiar",
+};
 
 export default function DashboardPage() {
-  const { user, clearAuth } = useAuthStore();
+  const { user, clearAuth, _hydrated } = useAuthStore();
   const router = useRouter();
+  const [generating, setGenerating] = useState(false);
+  const [genProgress, setGenProgress] = useState<{ category: string; index: number; total: number } | null>(null);
+  const [genWarning, setGenWarning] = useState<string | null>(null);
 
-  useEffect(() => { if (!user) router.push("/login"); }, [user, router]);
+  useEffect(() => { if (_hydrated && !user) router.push("/login"); }, [user, router, _hydrated]);
 
   const { data: guide, mutate: mutateGuide } = useSWR(user ? "my-guide" : null, api.getMyGuide);
   const { data: group } = useSWR(user ? "my-group" : null, api.getMyGroup);
@@ -18,92 +33,187 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
+  // Profile completeness — required before generating guide
+  const missingFields: string[] = [];
+  if (!user.country_code) missingFields.push("país");
+  if (!user.household_size) missingFields.push("nº de pessoas");
+  if (!user.housing_type) missingFields.push("tipo de habitação");
+  const profileComplete = missingFields.length === 0;
+
   const handleGenerateGuide = async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/guides/me/generate`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${localStorage.getItem("doomsday_token")}` },
-    });
-    const reader = res.body?.getReader();
-    if (!reader) return;
-    while (true) {
-      const { done } = await reader.read();
-      if (done) break;
+    setGenerating(true);
+    setGenProgress(null);
+    setGenWarning(null);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/guides/me/generate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("doomsday_token")}` },
+      });
+      if (!res.ok || !res.body) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 429) {
+          setGenWarning("Limite de gerações atingido (20/hora). Tenta mais tarde.");
+        } else {
+          setGenWarning(err.detail || err.error || `Erro ${res.status} ao gerar o guia.`);
+        }
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let hadErrors = false;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (evt.type === "category_start") {
+              setGenProgress({ category: evt.category, index: evt.index ?? 0, total: evt.total ?? 12 });
+            } else if (evt.type === "category_error") {
+              hadErrors = true;
+            } else if (evt.type === "error") {
+              setGenWarning(evt.message || "Erro na geração.");
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      }
+      if (hadErrors) setGenWarning("Alguns conteúdos usaram modo de contingência.");
+      mutateGuide();
+    } catch (err) {
+      setGenWarning("Falha na ligação ao servidor.");
+    } finally {
+      setGenerating(false);
+      setGenProgress(null);
     }
-    mutateGuide();
   };
 
   return (
     <div className="min-h-screen">
-      <nav className="border-b border-[#222] px-4 py-3 flex justify-between items-center">
-        <a href="/" className="font-bold text-sm">Doomsday Prep</a>
-        <div className="flex gap-4 text-sm">
-          <a href="/" className="text-gray-400 hover:text-gray-200">World Map</a>
+      {/* ── Navbar ── */}
+      <nav className="border-b border-[#1a3a1a] px-5 py-3 flex justify-between items-center bg-[#050505]">
+        <div>
+          <a href="/" className="pip-glow pip-flicker font-fallout uppercase tracking-[0.15em] text-xl">
+            ☢ DOOMSDAY PREP
+          </a>
+          <span className="hidden md:inline text-[10px] tracking-[0.2em] ml-3 uppercase"
+            style={{ color: "var(--pip-dim)" }}>// TERMINAL DO SOBREVIVENTE</span>
+        </div>
+        <div className="flex gap-3 text-sm">
+          <Link href="/" className="pip-nav-link text-xs">[ MAPA ]</Link>
+          <Link href="/profile" className="pip-nav-link text-xs">[ PERFIL ]</Link>
           <button onClick={() => { clearAuth(); router.push("/"); }}
-            className="text-gray-500 hover:text-gray-300">Sign out</button>
+            className="pip-nav-link text-xs">[ SAIR ]</button>
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-3 gap-8">
-        {/* Guide section — 2/3 width */}
+      <div className="max-w-7xl mx-auto px-4 py-6 grid lg:grid-cols-3 gap-6">
+        {/* ── Guia — 2/3 ── */}
         <div className="lg:col-span-2">
           <div className="flex items-center gap-3 mb-4">
-            <h1 className="text-xl font-bold">Your Preparation Guide</h1>
+            <h1 className="font-fallout uppercase tracking-[0.15em] text-xl md:text-2xl pip-glow mb-0">
+              ☢ GUIA DE SOBREVIVÊNCIA
+            </h1>
             {guide?.badge && (
-              <span className="text-xs px-2 py-1 bg-yellow-900 text-yellow-200 rounded-full">{guide.badge}</span>
+              <span className="pip-badge-warn">{guide.badge}</span>
             )}
           </div>
 
+          {genWarning && (
+            <div className="pip-badge-warn flex items-center gap-2 mb-3 p-2">
+              ⚠ {genWarning}
+            </div>
+          )}
+
           {!guide || guide.status === "pending" ? (
-            <div className="p-6 bg-[#111] border border-[#222] rounded-xl text-center">
-              <p className="text-gray-400 mb-4">No guide yet.</p>
-              {!user.country_code && (
-                <p className="text-xs text-gray-600 mb-3">Complete your profile first (country required).</p>
+            <div className="pip-panel p-8 text-center space-y-4">
+              <p className="tracking-[0.15em] uppercase text-sm pip-glow">
+                ▶ SEM GUIA GERADO
+              </p>
+              {!profileComplete ? (
+                <>
+                  <p className="text-sm tracking-wider" style={{ color: "var(--pip-dim)" }}>
+                    Perfil incompleto. Completa o teu perfil antes de gerar o guia.
+                  </p>
+                  <p className="pip-badge-danger inline-flex items-center gap-1">
+                    ⚠ Em falta: {missingFields.join(", ")}
+                  </p>
+                  <div>
+                    <a href="/profile" className="pip-btn pip-btn-solid text-sm tracking-widest">
+                      COMPLETAR PERFIL
+                    </a>
+                  </div>
+                </>
+              ) : generating ? (
+                <div className="space-y-3 text-left">
+                  <p className="text-sm tracking-wider cursor-blink" style={{ color: "var(--pip-green)" }}>
+                    {genProgress
+                      ? `▶ COMPILANDO: ${CATEGORY_PT[genProgress.category] || genProgress.category} (${genProgress.index + 1}/${genProgress.total})`
+                      : "▶ INICIALIZANDO PROTOCOLO..."}
+                  </p>
+                  <div className="pip-bar">
+                    <div className="pip-bar-fill"
+                      style={{ width: genProgress ? `${((genProgress.index + 1) / genProgress.total) * 100}%` : "5%" }} />
+                  </div>
+                </div>
+              ) : (
+                <button onClick={handleGenerateGuide} className="pip-btn pip-btn-solid text-sm tracking-widest">
+                  COMPILAR GUIA DE SOBREVIVÊNCIA
+                </button>
               )}
-              <button onClick={handleGenerateGuide} disabled={!user.country_code}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white rounded-lg text-sm">
-                Generate My Guide
-              </button>
             </div>
           ) : guide.content ? (
             <GuideAccordion content={guide.content} />
           ) : null}
         </div>
 
-        {/* Sidebar — 1/3 width */}
-        <div className="space-y-6">
-          {/* Family group */}
-          <div className="p-4 bg-[#111] border border-[#222] rounded-xl">
-            <h2 className="text-sm font-semibold mb-3">👨‍👩‍👧 Family Group</h2>
+        {/* ── Sidebar — 1/3 ── */}
+        <div className="space-y-4">
+          {/* Grupo familiar */}
+          <div className="pip-panel p-4">
+            <h2 className="pip-section text-xs mb-3">Grupo Familiar</h2>
             {group && "group_id" in group ? (
-              <div className="text-sm text-gray-300 space-y-1">
-                <p>{group.member_count} members</p>
+              <div className="text-sm space-y-1" style={{ color: "var(--pip-green)" }}>
+                <p className="tracking-wider">{group.member_count} membros</p>
                 {group.is_admin && (
-                  <p className="text-xs text-gray-500 break-all">Invite: {group.invite_link}</p>
+                  <p className="text-xs break-all" style={{ color: "var(--pip-dim)" }}>
+                    ▶ Convite: {group.invite_link}
+                  </p>
                 )}
               </div>
             ) : (
               <button onClick={async () => {
                 const g = await api.createGroup();
-                alert(`Share: ${window.location.origin}${g.invite_link}`);
-              }} className="text-xs text-gray-400 hover:text-gray-200 underline">
-                Create family group
+                alert(`Partilha: ${window.location.origin}${g.invite_link}`);
+              }} className="pip-btn text-xs w-full">
+                CRIAR GRUPO
               </button>
             )}
           </div>
 
+          {/* Mapa local */}
+          {user.zip_code && user.country_code && (
+            <LocalMap zipCode={user.zip_code} countryCode={user.country_code} />
+          )}
+
           {/* Checklist */}
           {checklist?.items && checklist.items.length > 0 && (
-            <div className="p-4 bg-[#111] border border-[#222] rounded-xl">
-              <h2 className="text-sm font-semibold mb-3">🏠 Family Checklist</h2>
+            <div className="pip-panel p-4">
+              <h2 className="pip-section text-xs mb-3">Checklist Familiar</h2>
               <div className="space-y-2">
                 {checklist.items.slice(0, 8).map((item) => (
-                  <label key={item.id} className="flex items-start gap-2 text-xs text-gray-400 cursor-pointer">
+                  <label key={item.id} className="flex items-start gap-2 text-xs cursor-pointer"
+                    style={{ color: item.status === "complete" ? "var(--pip-dim)" : "var(--pip-green)" }}>
                     <input type="checkbox" checked={item.status === "complete"} readOnly
-                      className="mt-0.5 accent-red-500" />
-                    <span className={item.status === "complete" ? "line-through text-gray-600" : ""}>
+                      className="mt-0.5 pip-check" />
+                    <span className={item.status === "complete" ? "line-through opacity-50" : ""}>
                       {item.text}
                       {item.calculated_quantity && (
-                        <span className="text-gray-600 ml-1">({item.calculated_quantity} {item.quantity_unit})</span>
+                        <span className="ml-1 opacity-50">({item.calculated_quantity} {item.quantity_unit})</span>
                       )}
                     </span>
                   </label>
@@ -112,20 +222,30 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* GDPR actions */}
-          <div className="p-4 bg-[#111] border border-[#222] rounded-xl">
-            <h2 className="text-sm font-semibold mb-3">Privacy</h2>
+          {/* Push notifications */}
+          <div className="pip-panel p-4">
+            <h2 className="pip-section text-xs mb-3">Alertas de Emergência</h2>
+            <PushToggle />
+            <p className="text-[10px] mt-2 opacity-40 tracking-wider" style={{ color: "var(--pip-dim)" }}>
+              Notificação imediata quando o patamar de risco muda no teu país.
+            </p>
+          </div>
+
+          {/* RGPD */}
+          <div className="pip-panel p-4">
+            <h2 className="pip-section text-xs mb-3">Privacidade RGPD</h2>
             <div className="flex flex-col gap-2">
-              <a href="/api/users/me/export"
-                className="text-xs text-gray-400 hover:text-gray-200 underline">Export my data (JSON)</a>
+              <a href="/api/users/me/export" className="pip-nav-link text-xs">
+                ▶ Exportar dados (JSON)
+              </a>
               <button onClick={async () => {
-                if (confirm("Delete your account permanently?")) {
+                if (confirm("Eliminar conta permanentemente?")) {
                   await api.deleteAccount();
                   clearAuth();
                   router.push("/");
                 }
-              }} className="text-xs text-red-600 hover:text-red-400 underline text-left">
-                Delete account
+              }} className="pip-btn pip-btn-danger text-xs text-left">
+                ELIMINAR CONTA
               </button>
             </div>
           </div>
@@ -145,25 +265,33 @@ function GuideAccordion({ content }: { content: Record<string, GuideSection> }) 
       {sorted.map(([category, section]) => {
         const meta = CATEGORY_META.find((c) => c.id === category);
         return (
-          <details key={category} className="bg-[#111] border border-[#222] rounded-xl group">
-            <summary className="px-4 py-3 cursor-pointer text-sm font-medium flex items-center gap-2">
-              <span>{meta?.icon}</span>
-              <span>{section?.title || meta?.label || category.replace("_", " ")}</span>
+          <details key={category} className="pip-panel group">
+            <summary className="px-4 py-3 cursor-pointer text-sm flex items-center gap-2 uppercase tracking-wider select-none"
+              style={{ color: "var(--pip-green)" }}>
+              <span className="opacity-60 group-open:opacity-100 transition-opacity">
+                {meta?.icon}
+              </span>
+              <span className="flex-1">{section?.title || meta?.label || category.replace("_", " ")}</span>
+              <span className="text-xs opacity-40 group-open:opacity-80 font-mono">
+                {section?.items?.length ?? 0} ITENS
+              </span>
             </summary>
-            <div className="px-4 pb-4 space-y-2">
+            <div className="px-4 pb-4 pt-2 space-y-2 border-t border-[#1a3a1a]">
               {section?.items?.map((item, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm text-gray-300">
-                  <span className="text-gray-600 text-xs mt-0.5">•</span>
+                <div key={i} className="flex items-start gap-2 text-sm" style={{ color: "var(--pip-green)" }}>
+                  <span className="mt-0.5 opacity-40 font-mono text-xs">▸</span>
                   <span>
                     {item.text}
                     {item.quantity && (
-                      <span className="text-gray-500 ml-1">— {item.quantity} {item.unit}</span>
+                      <span className="ml-2 opacity-50 text-xs">
+                        [{item.quantity} {item.unit}]
+                      </span>
                     )}
                   </span>
                 </div>
               ))}
               {section?.disclaimer && (
-                <p className="disclaimer mt-3">{section.disclaimer}</p>
+                <p className="disclaimer mt-3 text-xs">{section.disclaimer}</p>
               )}
             </div>
           </details>

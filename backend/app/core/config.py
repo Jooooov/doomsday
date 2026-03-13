@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     CF_PAGES_PROJECT: str = "doomsday-fallback"
 
     # Rate limiting
-    GUIDE_RATE_LIMIT_PER_HOUR: int = 5
+    GUIDE_RATE_LIMIT_PER_HOUR: int = 20
     GUIDE_RATE_LIMIT_WINDOW: int = 3600
 
     # Doomsday Clock

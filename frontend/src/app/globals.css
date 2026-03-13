@@ -2,40 +2,389 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ══════════════════════════════════════════════════
+   FALLOUT / PIP-BOY DESIGN SYSTEM
+   Phosphor green on black. CRT terminal aesthetic.
+   ══════════════════════════════════════════════════ */
+
 :root {
-  --bg: #080808;
-  --surface: #0d0d0d;
-  --border: #1f1f1f;
-  --text: #d4f5d4;       /* terminal green-white */
-  --muted: #4a7a4a;
-  --accent: #4ade80;     /* green-400 */
+  --pip-green:    #59ff59;
+  --pip-bright:   #39FF14;
+  --pip-dim:      #2a6b2a;
+  --pip-muted:    #1a3a1a;
+  --pip-amber:    #FFB000;
+  --bg:           #050505;
+  --surface:      #0a0a0a;
+  --surface-2:    #0f0f0f;
+  --border:       #1a3a1a;
+  --border-bright:#2a6b2a;
+  --text:         #59ff59;
+  --text-dim:     #2a6b2a;
+  --danger:       #ff4444;
+  --warning:      #FFB000;
+  --scanline-opacity: 0.04;
+}
+
+/* ── Base ─────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-fallout), "VT323", "Courier New", monospace;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  /* Subtle CRT vignette */
+  background-image: radial-gradient(ellipse at center, #0a0a0a 60%, #000 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* ── CRT Scanlines overlay on every page ─────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, var(--scanline-opacity)) 2px,
+    rgba(0, 0, 0, var(--scanline-opacity)) 4px
+  );
+}
+
+/* ── CRT flicker on logo ─────────────────────────── */
+@keyframes flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96%           { opacity: 0.85; }
+  97%           { opacity: 1; }
+  98%           { opacity: 0.9; }
+}
+
+/* ── Logo — fade in/out every second ─────────────── */
+@keyframes tick-second {
+  0%   { opacity: 1;    text-shadow: 0 0 6px var(--pip-green), 0 0 16px var(--pip-green); }
+  45%  { opacity: 0.15; text-shadow: none; }
+  55%  { opacity: 0.15; text-shadow: none; }
+  100% { opacity: 1;    text-shadow: 0 0 6px var(--pip-green), 0 0 16px var(--pip-green); }
+}
+
+/* ── Clock digit flip ────────────────────────────── */
+@keyframes digit-flip {
+  0%   { transform: scaleY(1); }
+  40%  { transform: scaleY(0.1); }
+  60%  { transform: scaleY(0.1); }
+  100% { transform: scaleY(1); }
+}
+
+/* ── Risk bar fill ───────────────────────────────── */
+@keyframes bar-fill {
+  from { width: 0%; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 4px var(--pip-green), 0 0 12px var(--pip-green); }
+  50%      { text-shadow: 0 0 8px var(--pip-bright), 0 0 24px var(--pip-bright), 0 0 40px var(--pip-green); }
+}
+
+/* ── Valve lamp — warm amber filament glow ────────── */
+@keyframes valve-breathe {
+  0%, 100% {
+    text-shadow:
+      0 0 10px #FFB000,
+      0 0 30px #FF8C00,
+      0 0 60px #FF6600,
+      0 0 100px rgba(255,100,0,0.4);
+    filter: brightness(1);
+  }
+  50% {
+    text-shadow:
+      0 0 16px #FFD700,
+      0 0 40px #FFB000,
+      0 0 80px #FF8C00,
+      0 0 140px rgba(255,140,0,0.5);
+    filter: brightness(1.15);
+  }
+}
+
+@keyframes scan-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes tick {
   0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-2deg); }
+  50%      { transform: rotate(-2deg); }
 }
 
 @keyframes pulse-red {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
-  50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,68,68,0.4); }
+  50%      { opacity: 0.85; box-shadow: 0 0 0 8px rgba(255,68,68,0); }
 }
 
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+@keyframes power-on {
+  0%   { filter: brightness(0); }
+  10%  { filter: brightness(3) blur(1px); }
+  15%  { filter: brightness(0.5); }
+  20%  { filter: brightness(2); }
+  100% { filter: brightness(1); }
+}
+
+/* ── Utility classes ─────────────────────────────── */
+.pip-glow {
+  text-shadow: 0 0 6px var(--pip-green), 0 0 16px var(--pip-green);
+}
+
+.pip-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.pip-flicker {
+  animation: flicker 8s ease-in-out infinite;
+}
+
+.pip-tick {
+  animation: tick-second 1s ease-in-out infinite;
+}
+
+.pip-scan-in {
+  animation: scan-in 0.3s ease-out forwards;
+}
+
+.pip-power-on {
+  animation: power-on 0.6s ease-out forwards;
+}
+
+.cursor-blink::after {
+  content: "▋";
+  animation: blink-cursor 1s step-end infinite;
+  margin-left: 2px;
+}
+
+/* ── Pip-Boy Panel / Card ────────────────────────── */
+.pip-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  box-shadow: 0 0 0 1px var(--border), inset 0 0 20px rgba(89,255,89,0.02);
+  position: relative;
+}
+
+.pip-panel::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+
+/* ── Pip-Boy Buttons ─────────────────────────────── */
+.pip-btn {
+  font-family: var(--font-fallout), "VT323", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid var(--pip-dim);
+  color: var(--pip-green);
+  background: transparent;
+  padding: 0.4em 1.2em;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+}
+
+.pip-btn::before { content: "[ "; }
+.pip-btn::after  { content: " ]"; }
+
+.pip-btn:hover {
+  border-color: var(--pip-green);
+  background: rgba(89,255,89,0.07);
+  box-shadow: 0 0 8px rgba(89,255,89,0.3);
+  color: var(--pip-bright);
+}
+
+.pip-btn-danger {
+  border-color: rgba(255,68,68,0.4);
+  color: var(--danger);
+}
+.pip-btn-danger::before { content: "[ "; }
+.pip-btn-danger::after  { content: " ]"; }
+.pip-btn-danger:hover {
+  border-color: var(--danger);
+  background: rgba(255,68,68,0.07);
+  box-shadow: 0 0 8px rgba(255,68,68,0.3);
+}
+
+.pip-btn-solid {
+  background: rgba(89,255,89,0.1);
+  border-color: var(--pip-green);
+  color: var(--pip-bright);
+  box-shadow: 0 0 6px rgba(89,255,89,0.2);
+}
+.pip-btn-solid:hover {
+  background: rgba(89,255,89,0.2);
+  box-shadow: 0 0 14px rgba(89,255,89,0.4);
+}
+
+/* ── Section Header ─────────────────────────────── */
+.pip-section {
+  color: var(--pip-green);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border-bright);
+  padding-bottom: 0.4em;
+  margin-bottom: 1rem;
+}
+.pip-section::before { content: "▶ "; opacity: 0.6; }
+
+/* ── Input fields ───────────────────────────────── */
+.pip-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border-bright);
+  color: var(--pip-green);
+  font-family: var(--font-fallout), "VT323", monospace;
+  letter-spacing: 0.05em;
+  padding: 0.4em 0.75em;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pip-input:focus {
+  border-color: var(--pip-green);
+  box-shadow: 0 0 8px rgba(89,255,89,0.25);
+}
+
+.pip-input::placeholder {
+  color: var(--pip-dim);
+  opacity: 0.8;
+}
+
+.pip-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2359ff59' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75em center;
+  padding-right: 2em;
+}
+
+/* ── Progress bar ────────────────────────────────── */
+.pip-bar {
+  background: var(--surface-2);
+  border: 1px solid var(--border-bright);
+  height: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.pip-bar-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--pip-green) 0px,
+    var(--pip-green) 8px,
+    var(--pip-dim) 8px,
+    var(--pip-dim) 10px
+  );
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px var(--pip-green);
+}
+
+/* ── Checkbox (Vault style) ─────────────────────── */
+.pip-check {
+  accent-color: var(--pip-green);
+}
+
+/* ── Danger / Warning badges ─────────────────────── */
+.pip-badge-danger {
+  background: rgba(255,68,68,0.1);
+  border: 1px solid rgba(255,68,68,0.4);
+  color: var(--danger);
+  font-size: 0.75rem;
+  padding: 0.2em 0.6em;
+  letter-spacing: 0.1em;
+}
+.pip-badge-warn {
+  background: rgba(255,176,0,0.08);
+  border: 1px solid rgba(255,176,0,0.35);
+  color: var(--warning);
+  font-size: 0.75rem;
+  padding: 0.2em 0.6em;
+  letter-spacing: 0.1em;
+}
+.pip-badge-ok {
+  background: rgba(89,255,89,0.08);
+  border: 1px solid rgba(89,255,89,0.35);
+  color: var(--pip-green);
+  font-size: 0.75rem;
+  padding: 0.2em 0.6em;
+  letter-spacing: 0.1em;
+}
+
+/* ── Nav link ────────────────────────────────────── */
+.pip-nav-link {
+  color: var(--pip-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  transition: color 0.15s;
+}
+.pip-nav-link:hover { color: var(--pip-green); text-shadow: 0 0 8px var(--pip-green); }
+
+/* ── Divider ─────────────────────────────────────── */
+.pip-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+  position: relative;
+}
+.pip-divider::before {
+  content: "◈";
+  position: absolute;
+  left: 50%;
+  top: -0.6em;
+  transform: translateX(-50%);
+  background: var(--bg);
+  padding: 0 0.5rem;
+  color: var(--border-bright);
+  font-size: 0.75rem;
+}
+
+/* ── Leaflet map ─────────────────────────────────── */
+.leaflet-container { background: #080808; }
+.leaflet-control-zoom a {
+  background: var(--surface) !important;
+  color: var(--pip-green) !important;
+  border-color: var(--border-bright) !important;
+}
+
+/* ── Clock / ticker ──────────────────────────────── */
 .clock-hand { animation: tick 2s ease-in-out infinite; transform-origin: bottom center; }
 .risk-red-pulse { animation: pulse-red 2s ease-in-out infinite; }
 
-.leaflet-container { background: #1a1a1a; }
-
+/* ── Disclaimer ──────────────────────────────────── */
 .disclaimer {
-  font-size: 0.75rem;
-  color: var(--muted);
-  border-left: 2px solid var(--border);
-  padding-left: 0.75rem;
+  font-size: 0.7rem;
+  color: var(--pip-dim);
+  border-left: 1px solid var(--border);
+  padding-left: 0.5rem;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
 }
+
+/* ── Scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); }
+::-webkit-scrollbar-thumb:hover { background: var(--pip-dim); }
+
+/* ── Selection ───────────────────────────────────── */
+::selection { background: rgba(89,255,89,0.25); color: var(--pip-bright); }

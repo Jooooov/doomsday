@@ -1,58 +1,81 @@
 import WorldMap from "@/components/map/WorldMap";
 import NewsFeed from "@/components/clock/NewsFeed";
 import CategoryPreview from "@/components/guide/CategoryPreview";
-import CTAForm from "@/components/auth/CTAForm";
+import NavClock from "@/components/clock/NavClock";
 
 export default function Home() {
   return (
-    <main className="flex flex-col min-h-screen">
+    <main className="flex flex-col min-h-screen pip-power-on">
 
       {/* ── Navbar ── */}
-      <nav className="flex items-center justify-between px-5 py-2 border-b border-[#1f1f1f] bg-[#080808] z-20 relative">
-        <div>
-          <span className="text-2xl text-green-400 tracking-widest uppercase">☢ DOOMSDAY PREP</span>
-          <span className="hidden md:inline text-xs text-gray-600 ml-4 tracking-wider">
-            // WORLD THREAT ASSESSMENT TERMINAL
+      <nav className="flex items-center justify-between px-5 py-3 border-b border-[#1a3a1a] bg-[#050505] z-20 relative">
+        {/* Logo */}
+        <div className="flex flex-col">
+          <span
+            className="pip-glow pip-tick font-fallout uppercase tracking-[0.2em] text-3xl md:text-4xl"
+            style={{ color: "var(--pip-bright)", lineHeight: 1 }}
+          >
+            ☢ DOOMSDAY PREP
+          </span>
+          <span className="text-[10px] tracking-[0.25em] uppercase mt-0.5 hidden md:block"
+            style={{ color: "var(--pip-dim)" }}>
+            ▶ WORLD THREAT ASSESSMENT TERMINAL v2.0
           </span>
         </div>
-        <div className="flex items-center gap-4 text-sm tracking-wider">
-          <a href="/login"  className="text-gray-500 hover:text-green-400 transition-colors uppercase">[ Login ]</a>
-          <a href="/register" className="text-green-400 border border-green-400/40 hover:border-green-400 px-3 py-1 transition-colors uppercase">
-            Criar Conta
+
+        {/* Doomsday Clock */}
+        <div className="hidden md:block">
+          <NavClock />
+        </div>
+
+        {/* Nav actions */}
+        <div className="flex items-center gap-3 text-sm">
+          <a href="/login" className="pip-nav-link text-sm hidden sm:block">[ Login ]</a>
+          <a href="/register"
+            className="pip-btn pip-btn-solid font-fallout text-sm tracking-widest">
+            CRIAR PERFIL
           </a>
         </div>
       </nav>
 
-      {/* ── World Risk Map — maximum space ── */}
-      <section className="relative flex-1" style={{ minHeight: "calc(100vh - 44px)" }}>
+      {/* ── World Risk Map — full viewport ── */}
+      <section className="relative flex-1" style={{ minHeight: "calc(100vh - 60px)" }}>
         <WorldMap />
       </section>
 
-      {/* ── Below-the-fold sections ── */}
-      <section className="max-w-7xl mx-auto px-4 py-10 w-full border-t border-[#1a1a1a]">
-        <h2 className="text-xl text-green-400 tracking-widest uppercase mb-5">
-          // Últimos Eventos Geopolíticos
+      {/* ── Últimos Eventos ── */}
+      <section className="max-w-7xl mx-auto px-4 py-10 w-full border-t border-[#1a3a1a]">
+        <h2 className="font-fallout uppercase tracking-[0.2em] text-2xl md:text-3xl pip-glow mb-1">
+          ☢ INTEL DE AMEAÇAS GLOBAIS
         </h2>
+        <p className="text-xs tracking-[0.2em] uppercase mb-6" style={{ color: "var(--pip-dim)" }}>
+          ▶ FEED EM TEMPO REAL — ACTUALIZADO AUTOMATICAMENTE
+        </p>
         <NewsFeed />
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 py-10 w-full border-t border-[#1a1a1a]">
-        <h2 className="text-xl text-green-400 tracking-widest uppercase mb-5">
-          // Categorias de Preparação
+      {/* ── Categorias de Preparação ── */}
+      <section className="max-w-7xl mx-auto px-4 py-10 w-full border-t border-[#1a3a1a]">
+        <h2 className="font-fallout uppercase tracking-[0.2em] text-2xl md:text-3xl pip-glow mb-1">
+          ☢ PROTOCOLOS DE SOBREVIVÊNCIA
         </h2>
+        <p className="text-xs tracking-[0.2em] uppercase mb-6" style={{ color: "var(--pip-dim)" }}>
+          ▶ 12 MÓDULOS DE PREPARAÇÃO — VAULT-TEC CERTIFIED
+        </p>
         <CategoryPreview />
       </section>
 
-      <section className="max-w-2xl mx-auto px-4 py-12 w-full">
-        <div className="bg-[#0d0d0d] border border-green-400/20 rounded-none p-8">
-          <h2 className="text-2xl text-green-400 tracking-widest uppercase mb-1">
-            Obter Guia Personalizado
-          </h2>
-          <p className="text-gray-500 mb-6 text-sm tracking-wider">
-            2 perguntas. Resultado imediato. Gratuito.
-          </p>
-          <CTAForm />
-        </div>
+      {/* ── Footer CTA ── */}
+      <section className="border-t border-[#1a3a1a] py-16 text-center">
+        <p className="font-fallout uppercase tracking-[0.2em] text-3xl md:text-5xl pip-glow pip-glow-pulse mb-3">
+          ☢ PREPARE-SE PARA O APOCALIPSE ☢
+        </p>
+        <p className="text-sm mb-8 tracking-[0.1em]" style={{ color: "var(--pip-dim)" }}>
+          Cria o teu perfil de sobrevivente e recebe o teu guia de sobrevivência personalizado por IA.
+        </p>
+        <a href="/register" className="pip-btn pip-btn-solid font-fallout tracking-[0.15em] text-lg px-10 py-4">
+          INICIAR PROTOCOLO DE SOBREVIVÊNCIA
+        </a>
       </section>
 
     </main>

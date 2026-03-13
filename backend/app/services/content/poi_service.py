@@ -60,22 +60,40 @@ async def _fetch_all_pois(zip_code: str, country_code: str, radius_km: float) ->
     radius_m = int(radius_km * 1000)
 
     # Geocode ZIP → lat/lon via Nominatim
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            geo_resp = await client.get(
-                NOMINATIM_URL,
-                params={"postalcode": zip_code, "country": country_code, "format": "json", "limit": 1},
-                headers={"User-Agent": "DoomsdayPlatform/1.0 (preparedness)"},
-            )
-            geo_resp.raise_for_status()
-            results = geo_resp.json()
-            if not results:
-                logger.warning(f"Geocoding returned no results for {zip_code}, {country_code}")
-                return {}
-            lat = float(results[0]["lat"])
-            lon = float(results[0]["lon"])
-    except Exception as e:
-        logger.error(f"Geocoding failed for {zip_code}/{country_code}: {e}")
+    # Strategy: multiple fallbacks because Nominatim is inconsistent with postal codes
+    lat, lon = None, None
+    country_lower = country_code.lower()
+    # Many countries use XXXX-YYY format — strip suffix for structured lookup
+    zip_prefix = zip_code.split("-")[0].split(" ")[0]
+
+    queries = [
+        # 1) structured prefix + countrycodes (works for PT, DE, FR...)
+        {"postalcode": zip_prefix, "countrycodes": country_lower, "format": "json", "limit": 1},
+        # 2) full code + countrycodes
+        {"postalcode": zip_code, "countrycodes": country_lower, "format": "json", "limit": 1},
+        # 3) free-form with country name (avoid ISO codes — Nominatim misinterprets them)
+        {"q": f"{zip_prefix} {country_code}", "countrycodes": country_lower, "format": "json", "limit": 1},
+    ]
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        for params in queries:
+            try:
+                geo_resp = await client.get(
+                    NOMINATIM_URL, params=params,
+                    headers={"User-Agent": "DoomsdayPlatform/1.0 (preparedness)"},
+                )
+                geo_resp.raise_for_status()
+                results = geo_resp.json()
+                if results:
+                    lat = float(results[0]["lat"])
+                    lon = float(results[0]["lon"])
+                    logger.info(f"Geocoded {zip_code}/{country_code} → {lat},{lon}")
+                    break
+            except Exception as e:
+                logger.warning(f"Geocoding attempt failed ({params}): {e}")
+
+    if lat is None:
+        logger.error(f"Geocoding failed for {zip_code}/{country_code} — all strategies exhausted")
         return {}
 
     # Single comprehensive Overpass query
@@ -88,13 +106,21 @@ async def _fetch_all_pois(zip_code: str, country_code: str, radius_km: float) ->
 );
 out body;
 """
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(OVERPASS_URL, data=query)
-            resp.raise_for_status()
-            elements = resp.json().get("elements", [])
-    except Exception as e:
-        logger.error(f"Overpass query failed: {e}")
+    elements = []
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(OVERPASS_URL, data=query)
+                resp.raise_for_status()
+                elements = resp.json().get("elements", [])
+                break  # success
+        except Exception as e:
+            logger.warning(f"Overpass attempt {attempt+1}/3 failed: {e}")
+            if attempt < 2:
+                import asyncio
+                await asyncio.sleep(2 ** attempt)  # 1s, 2s backoff
+    if not elements:
+        logger.error(f"Overpass failed after 3 attempts for {zip_code}/{country_code}")
         return {}
 
     result: dict = {

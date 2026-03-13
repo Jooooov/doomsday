@@ -17,6 +17,7 @@ class UserProfileUpdate(BaseModel):
     language: Optional[str] = None
     health_data_consent: Optional[bool] = None
     health_conditions: Optional[dict] = None
+    preferences: Optional[dict] = None
 
 
 class UserOut(BaseModel):
@@ -31,6 +32,7 @@ class UserOut(BaseModel):
     language: str
     health_data_consent: bool
     family_group_id: Optional[str]
+    preferences: Optional[dict] = None
 
     model_config = {"from_attributes": True}
 

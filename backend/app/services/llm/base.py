@@ -252,3 +252,15 @@ class BaseLLMProvider(ABC):
                 )
 
         return validated
+
+
+class BaseLLM(ABC):
+    """Abstract base for guide-generation LLM providers (ollama, anthropic)."""
+
+    @abstractmethod
+    async def generate(self, prompt: str, system: str = "", max_tokens: int = 2000) -> str:
+        """Return raw text response."""
+
+    @abstractmethod
+    async def generate_json(self, prompt: str, system: str = "", max_tokens: int = 2000) -> dict:
+        """Return parsed JSON dict."""

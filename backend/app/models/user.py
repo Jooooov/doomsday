@@ -27,6 +27,9 @@ class User(Base):
     health_data_consent: Mapped[bool] = mapped_column(Boolean, default=False)
     health_conditions: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
+    # Extended preferences (budget_level, has_children, children_count, has_pets)
+    preferences: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+
     # Family group
     family_group_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("family_groups.id", ondelete="SET NULL"), nullable=True

@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # ── LLM ───────────────────────────────────────────────────────────────────
     # Which LLM backend to use.  Swappable via env var — keeps abstraction.
-    LLM_PROVIDER: Literal["qwen", "openai_compat", "stub"] = "qwen"
+    LLM_PROVIDER: Literal["qwen", "openai_compat", "stub", "ollama", "anthropic"] = "qwen"
 
     # Qwen / vLLM / Ollama compatible endpoint (OpenAI-style REST)
     LLM_BASE_URL: str = "http://localhost:8080/v1"
@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # ── Redis (optional, for caching) ─────────────────────────────────────────
     REDIS_URL: str = "redis://localhost:6379/0"
     CACHE_TTL_SECONDS: int = 3600
+
+    # ── Web Push / VAPID ──────────────────────────────────────────────────────
+    # Generate with: python scripts/generate_vapid.py
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_CLAIMS_EMAIL: str = "admin@doomsdayprep.app"
 
 
 @lru_cache(maxsize=1)

@@ -42,6 +42,8 @@ export const api = {
     apiFetch<POIResponse>(`/api/map/pois?zip_code=${zip}&country_code=${country}&radius_km=${radius}&category=${category}`),
   subscribe: (sub: PushSubscriptionData) =>
     apiFetch<unknown>("/api/notifications/subscribe", { method: "POST", body: JSON.stringify(sub) }),
+  unsubscribe: (endpoint: string) =>
+    apiFetch<unknown>(`/api/notifications/unsubscribe?endpoint=${encodeURIComponent(endpoint)}`, { method: "DELETE" }),
 };
 
 export interface WorldMapResponse { countries: CountryScore[]; generated_at: string; }
@@ -56,10 +58,22 @@ export interface NewsItem { headline: string; source_url: string; }
 export interface Top5Response { items: PrepItem[]; risk_level: string; country: string; }
 export interface PrepItem { text: string; category: string; priority: number; quantity?: number; unit?: string; }
 export interface AuthResponse { access_token: string; token_type: string; user: UserProfile; }
+export interface UserPreferences {
+  budget_level?: "baixo" | "médio" | "alto";
+  has_children?: boolean;
+  children_count?: number;
+  pet_types?: string[];        // e.g. ["cão", "gato", "pássaro"]
+  has_elderly?: boolean;       // idosos (>65) no agregado
+  has_mobility_issues?: boolean; // alguém com mobilidade reduzida
+  floor_number?: number | null;  // andar (apartamentos)
+}
 export interface UserProfile {
   id: string; email: string; country_code: string | null;
   zip_code: string | null; household_size: number | null;
-  housing_type: string | null; language: string; family_group_id: string | null;
+  housing_type: string | null; has_vehicle: boolean | null;
+  language: string; family_group_id: string | null;
+  health_data_consent?: boolean;
+  preferences?: UserPreferences | null;
 }
 export interface GuideResponse { status: "current" | "updating" | "pending"; content?: Record<string, GuideSection>; badge?: string; }
 export interface GuideSection { title: string; items: PrepItem[]; disclaimer?: string; }
