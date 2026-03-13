@@ -23,6 +23,31 @@ function priorityToTimeline(priority?: number): string {
   return "360d";
 }
 
+function itemKey(category: string, text: string) {
+  return `${category}::${text}`;
+}
+
+function useCheckedItems(storageKey = "doomsday_checked") {
+  const [checked, setChecked] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = localStorage.getItem(storageKey);
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const toggle = (key: string) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem(storageKey, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  return { checked, toggle };
+}
+
 const LocalMap = dynamic(() => import("@/components/map/LocalMap"), { ssr: false });
 
 const CATEGORY_PT: Record<string, string> = {
@@ -38,7 +63,8 @@ export default function DashboardPage() {
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState<{ category: string; index: number; total: number } | null>(null);
   const [genWarning, setGenWarning] = useState<string | null>(null);
-  const [guideView, setGuideView] = useState<"accordion" | "timeline">("accordion");
+  const [guideView, setGuideView] = useState<"accordion" | "timeline">("timeline");
+  const { checked, toggle } = useCheckedItems();
 
   useEffect(() => { if (_hydrated && !user) router.push("/login"); }, [user, router, _hydrated]);
 
@@ -201,8 +227,8 @@ export default function DashboardPage() {
                 ))}
               </div>
               {guideView === "accordion"
-                ? <GuideAccordion content={guide.content} />
-                : <GuideTimeline content={guide.content} />}
+                ? <GuideAccordion content={guide.content} checked={checked} toggle={toggle} />
+                : <GuideTimeline content={guide.content} checked={checked} toggle={toggle} />}
             </>
           ) : null}
         </div>
@@ -291,7 +317,11 @@ export default function DashboardPage() {
   );
 }
 
-function GuideAccordion({ content }: { content: Record<string, GuideSection> }) {
+function GuideAccordion({ content, checked, toggle }: {
+  content: Record<string, GuideSection>;
+  checked: Set<string>;
+  toggle: (key: string) => void;
+}) {
   const order = CATEGORY_META.map((c) => c.id);
   const sorted = [...Object.entries(content)].sort(
     ([a], [b]) => order.indexOf(a) - order.indexOf(b)
@@ -301,49 +331,51 @@ function GuideAccordion({ content }: { content: Record<string, GuideSection> }) 
       {sorted.map(([category, section]) => {
         const meta = CATEGORY_META.find((c) => c.id === category);
         const color = meta?.color ?? "#59ff59";
+        const items = section?.items ?? [];
+        const doneCount = items.filter(it => checked.has(itemKey(category, it.text))).length;
         return (
           <details key={category} className="pip-panel group">
             <summary className="px-4 py-3 cursor-pointer text-sm flex items-center gap-3 uppercase tracking-wider select-none"
               style={{ color: "var(--pip-green)" }}>
-              {/* Colored category badge */}
               <span style={{
-                background: color,
-                color: "#fff",
-                borderRadius: "50%",
+                background: color, color: "#fff", borderRadius: "50%",
                 width: 22, height: 22, minWidth: 22,
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11,
-                boxShadow: `0 0 8px ${color}66`,
-                opacity: 0.85,
+                fontSize: 11, boxShadow: `0 0 8px ${color}66`, opacity: 0.85,
               }} className="group-open:opacity-100 transition-opacity">
                 {meta?.icon}
               </span>
               <span className="flex-1">{section?.title || meta?.label || category.replace("_", " ")}</span>
-              <span className="text-xs opacity-40 group-open:opacity-80 font-mono">
-                {section?.items?.length ?? 0} ITENS
+              <span className="text-xs font-mono opacity-50">
+                {doneCount}/{items.length}
               </span>
             </summary>
-            <div className="px-4 pb-4 pt-2 space-y-2 border-t border-[#1a3a1a]">
-              {section?.items?.map((item, i) => {
+            <div className="px-4 pb-4 pt-2 space-y-1.5 border-t border-[#1a3a1a]">
+              {items.map((item, i) => {
                 const tl = TIMELINES.find(t => t.id === priorityToTimeline(item.priority));
+                const key = itemKey(category, item.text);
+                const done = checked.has(key);
                 return (
-                  <div key={i} className="flex items-start gap-2 text-sm">
-                    <span style={{ color: tl?.color ?? "#59ff59" }} className="mt-0.5 font-mono text-xs shrink-0">▸</span>
-                    <span style={{ color: "var(--pip-green)" }}>
+                  <label key={i} className="flex items-start gap-2 cursor-pointer group/item">
+                    <input type="checkbox" checked={done} onChange={() => toggle(key)}
+                      className="mt-0.5 shrink-0 accent-[#59ff59] w-3.5 h-3.5" />
+                    <span style={{ color: done ? "var(--pip-dim)" : "var(--pip-green)",
+                      textDecoration: done ? "line-through" : "none", opacity: done ? 0.4 : 1,
+                      fontSize: 12, lineHeight: "1.4", transition: "all 0.2s" }}>
                       {item.text}
                       {item.quantity && (
-                        <span className="ml-2 opacity-50 text-xs font-mono">
+                        <span className="ml-2 opacity-50 text-[10px] font-mono">
                           [{item.quantity} {item.unit}]
                         </span>
                       )}
                     </span>
-                    {tl && (
+                    {tl && !done && (
                       <span className="ml-auto shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded"
                         style={{ color: tl.color, background: tl.bg, border: `1px solid ${tl.color}44` }}>
                         {tl.label}
                       </span>
                     )}
-                  </div>
+                  </label>
                 );
               })}
               {section?.disclaimer && (
@@ -357,7 +389,11 @@ function GuideAccordion({ content }: { content: Record<string, GuideSection> }) 
   );
 }
 
-function GuideTimeline({ content }: { content: Record<string, GuideSection> }) {
+function GuideTimeline({ content, checked, toggle }: {
+  content: Record<string, GuideSection>;
+  checked: Set<string>;
+  toggle: (key: string) => void;
+}) {
   const [activeTab, setActiveTab] = useState<string>("7d");
 
   const allItems = Object.entries(content).flatMap(([cat, section]) => {
@@ -369,24 +405,29 @@ function GuideTimeline({ content }: { content: Record<string, GuideSection> }) {
       catIcon: meta?.icon ?? "▸",
       catColor: meta?.color ?? "#59ff59",
       timeline: priorityToTimeline(item.priority),
+      key: itemKey(cat, item.text),
     }));
   });
 
   const activeTl = TIMELINES.find((t) => t.id === activeTab)!;
   const tabItems = allItems.filter((i) => i.timeline === activeTab);
+  const tabDone = tabItems.filter((i) => checked.has(i.key)).length;
 
   return (
     <div>
       {/* Timeline tab bar */}
       <div className="grid grid-cols-4 gap-1 mb-4">
         {TIMELINES.map((tl) => {
-          const count = allItems.filter((i) => i.timeline === tl.id).length;
+          const tlItems = allItems.filter((i) => i.timeline === tl.id);
+          const count = tlItems.length;
+          const done = tlItems.filter((i) => checked.has(i.key)).length;
           const active = activeTab === tl.id;
+          const pct = count > 0 ? Math.round((done / count) * 100) : 0;
           return (
             <button
               key={tl.id}
               onClick={() => setActiveTab(tl.id)}
-              className="py-2 px-1 text-center border transition-all rounded"
+              className="py-2 px-1 text-center border transition-all rounded overflow-hidden relative"
               style={{
                 borderColor: active ? tl.color : "#1a3a1a",
                 background: active ? tl.bg : "transparent",
@@ -401,20 +442,34 @@ function GuideTimeline({ content }: { content: Record<string, GuideSection> }) {
                 style={{ color: active ? tl.color : "var(--pip-dim)", opacity: 0.7 }}>
                 {tl.sublabel}
               </div>
-              <div className="text-[10px] font-mono font-bold mt-1"
-                style={{ color: active ? tl.color : "#1a3a1a" }}>
-                {count}
+              <div className="text-[10px] font-mono mt-1"
+                style={{ color: active ? tl.color : "#2a2a2a" }}>
+                {done}/{count}
               </div>
+              {/* Progress bar at bottom of tab */}
+              {count > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "#1a1a1a" }}>
+                  <div className="h-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: tl.color, opacity: 0.8 }} />
+                </div>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Header */}
-      <p className="text-[10px] mb-3 tracking-widest font-mono uppercase"
-        style={{ color: activeTl.color }}>
-        ▶ {tabItems.length} ACÇÕES · {activeTl.sublabel.toUpperCase()}
-      </p>
+      {/* Header with progress */}
+      <div className="flex items-center gap-3 mb-3">
+        <p className="text-[10px] tracking-widest font-mono uppercase flex-1"
+          style={{ color: activeTl.color }}>
+          ▶ {tabDone}/{tabItems.length} CONCLUÍDOS · {activeTl.sublabel.toUpperCase()}
+        </p>
+        {tabItems.length > 0 && tabDone === tabItems.length && (
+          <span className="text-[10px] font-mono tracking-wider" style={{ color: activeTl.color }}>
+            ✓ FASE COMPLETA
+          </span>
+        )}
+      </div>
 
       {/* Items */}
       {tabItems.length === 0 ? (
@@ -423,47 +478,70 @@ function GuideTimeline({ content }: { content: Record<string, GuideSection> }) {
         </p>
       ) : (
         <div className="space-y-1.5">
-          {tabItems.map((item, i) => (
-            <div key={i}
-              className="flex items-center gap-3 rounded px-3 py-2"
-              style={{ background: "#0a0a0a", border: "1px solid #1a1a1a" }}>
-              {/* Category icon badge */}
-              <div style={{
-                background: item.catColor,
-                color: "#fff",
-                borderRadius: "50%",
-                width: 26, height: 26, minWidth: 26,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12,
-                boxShadow: `0 0 8px ${item.catColor}55`,
-                flexShrink: 0,
-              }}>
-                {item.catIcon}
-              </div>
+          {tabItems.map((item, i) => {
+            const done = checked.has(item.key);
+            return (
+              <label key={i} className="flex items-center gap-3 rounded px-3 py-2 cursor-pointer transition-all"
+                style={{
+                  background: done ? "#0a0a0a" : "#0d0d0d",
+                  border: `1px solid ${done ? "#111" : "#1a1a1a"}`,
+                  opacity: done ? 0.5 : 1,
+                }}>
+                {/* Checkbox */}
+                <input
+                  type="checkbox"
+                  checked={done}
+                  onChange={() => toggle(item.key)}
+                  className="shrink-0 w-4 h-4"
+                  style={{ accentColor: activeTl.color }}
+                />
 
-              {/* Text */}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs leading-snug" style={{ color: "var(--pip-green)" }}>
-                  {item.text}
-                </p>
-                {item.quantity && (
-                  <span className="text-[10px] font-mono opacity-50">
-                    {item.quantity} {item.unit}
+                {/* Category icon badge */}
+                <div style={{
+                  background: done ? "#333" : item.catColor,
+                  color: "#fff",
+                  borderRadius: "50%",
+                  width: 26, height: 26, minWidth: 26,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 12,
+                  boxShadow: done ? "none" : `0 0 8px ${item.catColor}55`,
+                  flexShrink: 0,
+                  transition: "all 0.2s",
+                }}>
+                  {done ? "✓" : item.catIcon}
+                </div>
+
+                {/* Text */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs leading-snug"
+                    style={{
+                      color: done ? "var(--pip-dim)" : "var(--pip-green)",
+                      textDecoration: done ? "line-through" : "none",
+                      transition: "all 0.2s",
+                    }}>
+                    {item.text}
+                  </p>
+                  {item.quantity && (
+                    <span className="text-[10px] font-mono opacity-50">
+                      {item.quantity} {item.unit}
+                    </span>
+                  )}
+                </div>
+
+                {/* Category chip — hidden when done */}
+                {!done && (
+                  <span className="text-[9px] font-mono uppercase tracking-wide shrink-0 px-1.5 py-0.5 rounded"
+                    style={{
+                      color: item.catColor,
+                      background: `${item.catColor}18`,
+                      border: `1px solid ${item.catColor}44`,
+                    }}>
+                    {item.catLabel}
                   </span>
                 )}
-              </div>
-
-              {/* Category label chip */}
-              <span className="text-[9px] font-mono uppercase tracking-wide shrink-0 px-1.5 py-0.5 rounded"
-                style={{
-                  color: item.catColor,
-                  background: `${item.catColor}18`,
-                  border: `1px solid ${item.catColor}44`,
-                }}>
-                {item.catLabel}
-              </span>
-            </div>
-          ))}
+              </label>
+            );
+          })}
         </div>
       )}
     </div>
