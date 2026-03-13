@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import useSWR from "swr";
@@ -60,11 +60,22 @@ const CATEGORY_PT: Record<string, string> = {
 export default function DashboardPage() {
   const { user, clearAuth, _hydrated } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState<{ category: string; index: number; total: number } | null>(null);
   const [genWarning, setGenWarning] = useState<string | null>(null);
   const [guideView, setGuideView] = useState<"accordion" | "timeline">("timeline");
+  const [focusCategory, setFocusCategory] = useState<string | null>(null);
   const { checked, toggle } = useCheckedItems();
+
+  // Handle ?cat= from homepage category cards
+  useEffect(() => {
+    const cat = searchParams.get("cat");
+    if (cat) {
+      setGuideView("accordion");
+      setFocusCategory(cat);
+    }
+  }, [searchParams]);
 
   useEffect(() => { if (_hydrated && !user) router.push("/login"); }, [user, router, _hydrated]);
 
@@ -230,7 +241,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               {guideView === "accordion"
-                ? <GuideAccordion content={guide.content} checked={checked} toggle={toggle} />
+                ? <GuideAccordion content={guide.content} checked={checked} toggle={toggle} focusCategory={focusCategory} />
                 : <GuideTimeline content={guide.content} checked={checked} toggle={toggle} />}
             </>
           ) : null}
@@ -350,12 +361,19 @@ function GuideSummary({ user, content }: {
   );
 }
 
-function GuideAccordion({ content, checked, toggle }: {
+function GuideAccordion({ content, checked, toggle, focusCategory }: {
   content: Record<string, GuideSection>;
   checked: Set<string>;
   toggle: (key: string) => void;
+  focusCategory?: string | null;
 }) {
   const order = CATEGORY_META.map((c) => c.id);
+
+  useEffect(() => {
+    if (!focusCategory) return;
+    const el = document.getElementById(`cat-${focusCategory}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focusCategory]);
   const sorted = [...Object.entries(content)].sort(
     ([a], [b]) => order.indexOf(a) - order.indexOf(b)
   );
@@ -367,7 +385,7 @@ function GuideAccordion({ content, checked, toggle }: {
         const items = section?.items ?? [];
         const doneCount = items.filter(it => checked.has(itemKey(category, it.text))).length;
         return (
-          <details key={category} className="pip-panel group">
+          <details key={category} className="pip-panel group" open={category === focusCategory} id={`cat-${category}`}>
             <summary className="px-4 py-3 cursor-pointer text-sm flex items-center gap-3 uppercase tracking-wider select-none"
               style={{ color: "var(--pip-green)" }}>
               <span style={{
