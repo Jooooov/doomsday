@@ -9,6 +9,20 @@ import { useAuthStore } from "@/lib/store";
 import { CATEGORY_META } from "@/lib/categories";
 import PushToggle from "@/components/ui/PushToggle";
 
+const TIMELINES = [
+  { id: "7d",   label: "7 DIAS",  sublabel: "imediato",   color: "#ef4444", bg: "#450a0a" },
+  { id: "30d",  label: "30 DIAS", sublabel: "curto prazo", color: "#f97316", bg: "#431407" },
+  { id: "180d", label: "6 MESES", sublabel: "médio prazo", color: "#eab308", bg: "#422006" },
+  { id: "360d", label: "1 ANO",   sublabel: "longo prazo", color: "#22c55e", bg: "#052e16" },
+] as const;
+
+function priorityToTimeline(priority?: number): string {
+  if (priority === 1) return "7d";
+  if (priority === 2) return "30d";
+  if (priority === 3) return "180d";
+  return "360d";
+}
+
 const LocalMap = dynamic(() => import("@/components/map/LocalMap"), { ssr: false });
 
 const CATEGORY_PT: Record<string, string> = {
@@ -24,6 +38,7 @@ export default function DashboardPage() {
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState<{ category: string; index: number; total: number } | null>(null);
   const [genWarning, setGenWarning] = useState<string | null>(null);
+  const [guideView, setGuideView] = useState<"accordion" | "timeline">("accordion");
 
   useEffect(() => { if (_hydrated && !user) router.push("/login"); }, [user, router, _hydrated]);
 
@@ -167,7 +182,28 @@ export default function DashboardPage() {
               )}
             </div>
           ) : guide.content ? (
-            <GuideAccordion content={guide.content} />
+            <>
+              {/* View toggle */}
+              <div className="flex gap-2 mb-4">
+                {(["accordion", "timeline"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setGuideView(v)}
+                    className="text-[10px] px-3 py-1.5 border tracking-widest uppercase transition-all rounded"
+                    style={{
+                      borderColor: guideView === v ? "var(--pip-green)" : "#1a3a1a",
+                      color: guideView === v ? "var(--pip-green)" : "var(--pip-dim)",
+                      background: guideView === v ? "#59ff5912" : "transparent",
+                    }}
+                  >
+                    {v === "accordion" ? "⊞ CATEGORIAS" : "◈ TIMELINE"}
+                  </button>
+                ))}
+              </div>
+              {guideView === "accordion"
+                ? <GuideAccordion content={guide.content} />
+                : <GuideTimeline content={guide.content} />}
+            </>
           ) : null}
         </div>
 
@@ -264,11 +300,22 @@ function GuideAccordion({ content }: { content: Record<string, GuideSection> }) 
     <div className="space-y-2">
       {sorted.map(([category, section]) => {
         const meta = CATEGORY_META.find((c) => c.id === category);
+        const color = meta?.color ?? "#59ff59";
         return (
           <details key={category} className="pip-panel group">
-            <summary className="px-4 py-3 cursor-pointer text-sm flex items-center gap-2 uppercase tracking-wider select-none"
+            <summary className="px-4 py-3 cursor-pointer text-sm flex items-center gap-3 uppercase tracking-wider select-none"
               style={{ color: "var(--pip-green)" }}>
-              <span className="opacity-60 group-open:opacity-100 transition-opacity">
+              {/* Colored category badge */}
+              <span style={{
+                background: color,
+                color: "#fff",
+                borderRadius: "50%",
+                width: 22, height: 22, minWidth: 22,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11,
+                boxShadow: `0 0 8px ${color}66`,
+                opacity: 0.85,
+              }} className="group-open:opacity-100 transition-opacity">
                 {meta?.icon}
               </span>
               <span className="flex-1">{section?.title || meta?.label || category.replace("_", " ")}</span>
@@ -277,19 +324,28 @@ function GuideAccordion({ content }: { content: Record<string, GuideSection> }) 
               </span>
             </summary>
             <div className="px-4 pb-4 pt-2 space-y-2 border-t border-[#1a3a1a]">
-              {section?.items?.map((item, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm" style={{ color: "var(--pip-green)" }}>
-                  <span className="mt-0.5 opacity-40 font-mono text-xs">▸</span>
-                  <span>
-                    {item.text}
-                    {item.quantity && (
-                      <span className="ml-2 opacity-50 text-xs">
-                        [{item.quantity} {item.unit}]
+              {section?.items?.map((item, i) => {
+                const tl = TIMELINES.find(t => t.id === priorityToTimeline(item.priority));
+                return (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <span style={{ color: tl?.color ?? "#59ff59" }} className="mt-0.5 font-mono text-xs shrink-0">▸</span>
+                    <span style={{ color: "var(--pip-green)" }}>
+                      {item.text}
+                      {item.quantity && (
+                        <span className="ml-2 opacity-50 text-xs font-mono">
+                          [{item.quantity} {item.unit}]
+                        </span>
+                      )}
+                    </span>
+                    {tl && (
+                      <span className="ml-auto shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded"
+                        style={{ color: tl.color, background: tl.bg, border: `1px solid ${tl.color}44` }}>
+                        {tl.label}
                       </span>
                     )}
-                  </span>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
               {section?.disclaimer && (
                 <p className="disclaimer mt-3 text-xs">{section.disclaimer}</p>
               )}
@@ -297,6 +353,119 @@ function GuideAccordion({ content }: { content: Record<string, GuideSection> }) 
           </details>
         );
       })}
+    </div>
+  );
+}
+
+function GuideTimeline({ content }: { content: Record<string, GuideSection> }) {
+  const [activeTab, setActiveTab] = useState<string>("7d");
+
+  const allItems = Object.entries(content).flatMap(([cat, section]) => {
+    const meta = CATEGORY_META.find((c) => c.id === cat);
+    return (section?.items ?? []).map((item) => ({
+      ...item,
+      category: cat,
+      catLabel: meta?.label?.split(" ")[0] ?? cat,
+      catIcon: meta?.icon ?? "▸",
+      catColor: meta?.color ?? "#59ff59",
+      timeline: priorityToTimeline(item.priority),
+    }));
+  });
+
+  const activeTl = TIMELINES.find((t) => t.id === activeTab)!;
+  const tabItems = allItems.filter((i) => i.timeline === activeTab);
+
+  return (
+    <div>
+      {/* Timeline tab bar */}
+      <div className="grid grid-cols-4 gap-1 mb-4">
+        {TIMELINES.map((tl) => {
+          const count = allItems.filter((i) => i.timeline === tl.id).length;
+          const active = activeTab === tl.id;
+          return (
+            <button
+              key={tl.id}
+              onClick={() => setActiveTab(tl.id)}
+              className="py-2 px-1 text-center border transition-all rounded"
+              style={{
+                borderColor: active ? tl.color : "#1a3a1a",
+                background: active ? tl.bg : "transparent",
+                boxShadow: active ? `0 0 12px ${tl.color}33` : "none",
+              }}
+            >
+              <div className="font-mono font-bold text-xs tracking-widest"
+                style={{ color: active ? tl.color : "var(--pip-dim)" }}>
+                {tl.label}
+              </div>
+              <div className="text-[8px] tracking-wide mt-0.5 uppercase"
+                style={{ color: active ? tl.color : "var(--pip-dim)", opacity: 0.7 }}>
+                {tl.sublabel}
+              </div>
+              <div className="text-[10px] font-mono font-bold mt-1"
+                style={{ color: active ? tl.color : "#1a3a1a" }}>
+                {count}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Header */}
+      <p className="text-[10px] mb-3 tracking-widest font-mono uppercase"
+        style={{ color: activeTl.color }}>
+        ▶ {tabItems.length} ACÇÕES · {activeTl.sublabel.toUpperCase()}
+      </p>
+
+      {/* Items */}
+      {tabItems.length === 0 ? (
+        <p className="text-xs opacity-40 text-center py-4" style={{ color: "var(--pip-dim)" }}>
+          Sem itens para este período.
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {tabItems.map((item, i) => (
+            <div key={i}
+              className="flex items-center gap-3 rounded px-3 py-2"
+              style={{ background: "#0a0a0a", border: "1px solid #1a1a1a" }}>
+              {/* Category icon badge */}
+              <div style={{
+                background: item.catColor,
+                color: "#fff",
+                borderRadius: "50%",
+                width: 26, height: 26, minWidth: 26,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 12,
+                boxShadow: `0 0 8px ${item.catColor}55`,
+                flexShrink: 0,
+              }}>
+                {item.catIcon}
+              </div>
+
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs leading-snug" style={{ color: "var(--pip-green)" }}>
+                  {item.text}
+                </p>
+                {item.quantity && (
+                  <span className="text-[10px] font-mono opacity-50">
+                    {item.quantity} {item.unit}
+                  </span>
+                )}
+              </div>
+
+              {/* Category label chip */}
+              <span className="text-[9px] font-mono uppercase tracking-wide shrink-0 px-1.5 py-0.5 rounded"
+                style={{
+                  color: item.catColor,
+                  background: `${item.catColor}18`,
+                  border: `1px solid ${item.catColor}44`,
+                }}>
+                {item.catLabel}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
