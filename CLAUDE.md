@@ -15,7 +15,9 @@ doomsday/
 │   │   │   ├── llm/          LLM factory (Qwen/fallback)
 │   │   │   └── notifications/push.py (pywebpush)
 │   │   └── core/config.py    Settings (VAPID, DB, etc.)
-│   └── scripts/generate_vapid.py
+│   └── scripts/
+│       ├── generate_vapid.py     Generate VAPID key pair for web push
+│       └── add_countries.py      Idempotent: insert missing country risk scores
 ├── frontend/         Next.js 15 (src/app router)
 │   ├── src/
 │   │   ├── app/              Pages (dashboard, profile, login, register)
@@ -75,6 +77,19 @@ Frontend runs in **dev mode** inside Docker with hot-reload via volume mounts.
 - `src/lib/i18n.ts`: Zustand store, locale persisted to localStorage
 - Locale files: `public/locales/pt.json`, `public/locales/en.json`
 - `AppInit.tsx` in layout: loads locale on mount
+
+### Country Risk Data
+- **41 countries** seeded (10 original + 31 added via `scripts/add_countries.py`)
+- Risk scale: `green ≥83s · yellow 70-82s · orange 63-69s · red ≤62s`
+- To add more countries to a running instance: `docker exec doomsday-backend sh -c "cd /app && PYTHONPATH=/app python scripts/add_countries.py"`
+- For fresh installs: `seed_data.py` now includes all 41 countries
+- NUM2ISO map in `WorldMap.tsx` must include numeric TopoJSON IDs for new countries to appear coloured
+
+### Category Cards (Homepage)
+- `CategoryPreview.tsx` is a client component (`"use client"`)
+- On click: modal shows category description + item checklist (from localStorage) + CTA to guide
+- Auth state from `useAuthStore()` determines which modal variant to show (guest / no guide / with guide)
+- Deep-link: CTA goes to `/dashboard?cat=<id>` → dashboard reads `useSearchParams`, opens accordion, scrolls to category
 
 ## SQLAlchemy Async Rules
 - **Never** access relationship attributes (`.versions`, `.user`) without explicit loading
