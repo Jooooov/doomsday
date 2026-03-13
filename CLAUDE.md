@@ -91,6 +91,56 @@ Frontend runs in **dev mode** inside Docker with hot-reload via volume mounts.
 - Auth state from `useAuthStore()` determines which modal variant to show (guest / no guide / with guide)
 - Deep-link: CTA goes to `/dashboard?cat=<id>` → dashboard reads `useSearchParams`, opens accordion, scrolls to category
 
+## Deployment (Production)
+
+### Architecture
+```
+Internet → Nginx (80/443, SSL) → Frontend :3000 (Next.js standalone)
+                               → Backend  :8000 (FastAPI)
+                      PostgreSQL :5432 (internal)
+                      Redis      :6379 (internal)
+```
+
+### Option A — VPS (Hetzner/DO, recommended for EU/GDPR)
+1. Spin up Ubuntu 22.04, min 2GB RAM (Hetzner CX22 €3.79/mo)
+2. `bash scripts/setup-vps.sh yourdomain.com your@email.com`
+3. Copy `.env` to `/opt/doomsday/.env` (see `.env.example`)
+4. `docker compose -f docker-compose.prod.yml up -d --build`
+
+### Option B — Vercel (frontend) + Railway (backend)
+- Frontend: connect GitHub repo to Vercel, set `NEXT_PUBLIC_API_URL` env var
+- Backend: connect GitHub repo to Railway, add all backend env vars
+- DB: Railway PostgreSQL add-on
+- Redis: Railway Redis add-on or Upstash free tier
+
+### CI/CD (GitHub Actions)
+Required secrets in GitHub → Settings → Secrets:
+| Secret | Value |
+|--------|-------|
+| `VPS_HOST` | Server IP or hostname |
+| `VPS_USER` | SSH user (usually `root`) |
+| `VPS_SSH_KEY` | Private SSH key (ed25519) |
+| `PROD_ENV` | Full contents of production `.env` file |
+
+Push to `main` → auto-deploys to VPS (pulls code, rebuilds, seeds DB).
+
+### Required env vars for production (beyond dev defaults)
+```
+SECRET_KEY=<random 64-char string>
+POSTGRES_PASSWORD=<strong password>
+CORS_ORIGINS=["https://yourdomain.com"]
+NEXT_PUBLIC_API_URL=https://yourdomain.com
+VAPID_PRIVATE_KEY=<from generate_vapid.py>
+VAPID_PUBLIC_KEY=<from generate_vapid.py>
+VAPID_CLAIMS_EMAIL=your@email.com
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=<same as VAPID_PUBLIC_KEY>
+```
+
+### SSL Certificates
+- Auto-managed by `setup-vps.sh` via Let's Encrypt / certbot
+- Cron auto-renews every day at 03:00 and reloads nginx
+- Certs stored in `nginx/certs/` (gitignored)
+
 ## SQLAlchemy Async Rules
 - **Never** access relationship attributes (`.versions`, `.user`) without explicit loading
 - Use `select(...).where(...)` queries instead of lazy-loaded attributes

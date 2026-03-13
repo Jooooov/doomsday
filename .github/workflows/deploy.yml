@@ -1,0 +1,46 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/doomsday
+
+            # Pull latest code
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Write env file from GitHub secret
+            echo "${{ secrets.PROD_ENV }}" > .env
+
+            # Build and restart
+            docker compose -f docker-compose.prod.yml pull postgres redis nginx
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+
+            # Wait for backend health
+            echo "Waiting for backend..."
+            for i in {1..30}; do
+              docker exec doomsday-backend curl -sf http://localhost:8000/health && break
+              sleep 3
+            done
+
+            # Seed if this is first deploy (idempotent)
+            docker exec doomsday-backend sh -c "cd /app && PYTHONPATH=/app python seed_data.py" || true
+            docker exec doomsday-backend sh -c "cd /app && PYTHONPATH=/app python scripts/add_countries.py" || true
+
+            echo "Deploy complete."
