@@ -1,0 +1,1160 @@
+# ============================================================
+# Doomsday Platform — Checklist Quantity Formula Schemas
+# ============================================================
+# Version: 1.0.0
+# Purpose: Maps checklist item types to formula parameters for
+#          personalized survival/preparation guide generation.
+#
+# Formula: resolved_qty = (base_qty + (per_person_multiplier * persons))
+#                         * duration_multiplier * duration_days
+#          Then apply special_case_overrides on top.
+#
+# Units: defined per item — litres, kg, days, items, boxes, rolls, etc.
+# ============================================================
+
+schema_version: "1.0.0"
+last_updated: "2026-03-11"
+supported_duration_units: [days, weeks]
+
+# ---------------------
+# CATEGORY DEFINITIONS
+# ---------------------
+categories:
+  water:
+    label: "Water & Hydration"
+    priority: 1
+  food:
+    label: "Food & Nutrition"
+    priority: 2
+  medical:
+    label: "Medical & First Aid"
+    priority: 3
+  sanitation:
+    label: "Sanitation & Hygiene"
+    priority: 4
+  shelter:
+    label: "Shelter & Warmth"
+    priority: 5
+  communication:
+    label: "Communication & Information"
+    priority: 6
+  power:
+    label: "Power & Light"
+    priority: 7
+  documents:
+    label: "Documents & Financial"
+    priority: 8
+  tools:
+    label: "Tools & Equipment"
+    priority: 9
+  clothing:
+    label: "Clothing & Protection"
+    priority: 10
+  special_needs:
+    label: "Special Needs Supplies"
+    priority: 11
+  pets:
+    label: "Pet Supplies"
+    priority: 12
+  defense:
+    label: "Self-Defense & Security"
+    priority: 13
+
+# ---------------------
+# ITEM FORMULA SCHEMAS
+# ---------------------
+items:
+
+  # ── WATER ──────────────────────────────────────────────────
+  - id: water_drinking
+    category: water
+    label: "Drinking Water"
+    description: "Potable water for drinking and cooking"
+    unit: litres
+    unit_label: "L"
+    base_qty: 0
+    per_person_multiplier: 2.0        # 2 L/person/day (WHO minimum)
+    duration_multiplier: 1.0          # multiplied by duration_days
+    duration_unit: days
+    min_total: 6.0                    # always store at least 6L
+    max_total: null                   # no hard cap
+    rounding: ceil
+    tags: [critical, daily_use]
+    special_case_overrides:
+      - condition: climate == "hot"
+        field: per_person_multiplier
+        operator: multiply
+        value: 1.5
+        reason: "Hot climates increase water needs by 50%"
+      - condition: has_infant == true
+        field: base_qty
+        operator: add
+        value: 1.5
+        reason: "Infants require extra water for formula/hygiene (1.5L/day)"
+      - condition: has_pregnant == true
+        field: per_person_multiplier
+        operator: add
+        value: 0.5
+        reason: "Pregnant persons need +0.5L/day"
+      - condition: has_medical_condition_renal == true
+        field: per_person_multiplier
+        operator: multiply
+        value: 1.3
+        reason: "Renal conditions may require increased hydration (medical advice)"
+      - condition: mobility_level == "limited"
+        field: per_person_multiplier
+        operator: add
+        value: 0.5
+        reason: "Limited mobility individuals may need extra sanitation water"
+
+  - id: water_sanitation
+    category: water
+    label: "Sanitation Water"
+    description: "Non-potable water for hygiene, flushing, cleaning"
+    unit: litres
+    unit_label: "L"
+    base_qty: 0
+    per_person_multiplier: 5.0        # 5 L/person/day
+    duration_multiplier: 1.0
+    duration_unit: days
+    min_total: 10.0
+    max_total: null
+    rounding: ceil
+    tags: [daily_use]
+    special_case_overrides:
+      - condition: has_infant == true
+        field: per_person_multiplier
+        operator: add
+        value: 2.0
+        reason: "Infants need extra water for bathing and diaper changes"
+
+  - id: water_purification_tablets
+    category: water
+    label: "Water Purification Tablets"
+    description: "Chemical purification tabs (e.g., chlorine dioxide)"
+    unit: tablets
+    unit_label: "tablets"
+    base_qty: 20
+    per_person_multiplier: 5.0        # 5 extra tablets per person as buffer
+    duration_multiplier: 0.5          # fewer needed with stored water
+    duration_unit: days
+    min_total: 20
+    max_total: 500
+    rounding: ceil
+    tags: [backup, purification]
+    special_case_overrides: []
+
+  - id: water_filter
+    category: water
+    label: "Portable Water Filter"
+    description: "Mechanical filter (LifeStraw or similar), quantity = units to own"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0            # not duration-dependent; flat count
+    duration_unit: days
+    flat_override: true               # ignore duration scaling
+    min_total: 1
+    max_total: 4
+    rounding: ceil
+    tags: [backup, purification, reusable]
+    special_case_overrides:
+      - condition: group_size >= 5
+        field: base_qty
+        operator: set
+        value: 2
+        reason: "Groups of 5+ should have at least 2 filters"
+
+  # ── FOOD ───────────────────────────────────────────────────
+  - id: food_nonperishable_calories
+    category: food
+    label: "Non-Perishable Food (caloric)"
+    description: "Canned goods, freeze-dried meals, rice, pasta, etc. in caloric equivalents"
+    unit: kcal
+    unit_label: "kcal"
+    base_qty: 0
+    per_person_multiplier: 2000       # 2000 kcal/person/day baseline
+    duration_multiplier: 1.0
+    duration_unit: days
+    min_total: 6000
+    max_total: null
+    rounding: ceil
+    tags: [critical, daily_use]
+    special_case_overrides:
+      - condition: activity_level == "high"
+        field: per_person_multiplier
+        operator: multiply
+        value: 1.3
+        reason: "High physical activity increases caloric needs by 30%"
+      - condition: has_infant == true
+        field: base_qty
+        operator: add
+        value: 500
+        reason: "Infant formula/food adds ~500kcal equiv/day"
+      - condition: has_pregnant == true
+        field: per_person_multiplier
+        operator: add
+        value: 300
+        reason: "Pregnancy increases caloric need by ~300kcal/day"
+      - condition: has_medical_condition_diabetes == true
+        field: tags
+        operator: add_tag
+        value: "review_dietary"
+        reason: "Diabetic users should review carb ratios in food selection"
+
+  - id: food_baby_formula
+    category: food
+    label: "Baby Formula / Infant Food"
+    description: "Formula powder or jars for infants under 12 months"
+    unit: days_supply
+    unit_label: "days"
+    base_qty: 0
+    per_person_multiplier: 0
+    duration_multiplier: 1.0
+    duration_unit: days
+    flat_override: false
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [conditional, infant]
+    conditional_on: "has_infant == true"
+    conditional_formula:
+      qty_per_infant_per_day: 1       # 1 day's supply per infant per day
+    special_case_overrides: []
+
+  - id: food_salt
+    category: food
+    label: "Salt"
+    description: "Iodized salt for cooking and preservation"
+    unit: kg
+    unit_label: "kg"
+    base_qty: 0.2
+    per_person_multiplier: 0.05       # 50g/person/week → ~7g/day
+    duration_multiplier: 0.143        # 1/7 (daily rate from weekly base)
+    duration_unit: days
+    min_total: 0.5
+    max_total: 5.0
+    rounding: two_decimal
+    tags: [cooking]
+    special_case_overrides: []
+
+  - id: food_cooking_oil
+    category: food
+    label: "Cooking Oil"
+    description: "Vegetable/olive oil for cooking calories and fats"
+    unit: litres
+    unit_label: "L"
+    base_qty: 0.5
+    per_person_multiplier: 0.1        # ~100ml/person/week
+    duration_multiplier: 0.143
+    duration_unit: days
+    min_total: 0.5
+    max_total: 10.0
+    rounding: two_decimal
+    tags: [cooking]
+    special_case_overrides: []
+
+  - id: food_multivitamins
+    category: food
+    label: "Multivitamins"
+    description: "Daily multivitamin supplements to compensate limited fresh food"
+    unit: tablets
+    unit_label: "tablets"
+    base_qty: 0
+    per_person_multiplier: 1.0        # 1 tablet/person/day
+    duration_multiplier: 1.0
+    duration_unit: days
+    min_total: 30
+    max_total: null
+    rounding: ceil
+    tags: [health, supplement]
+    special_case_overrides:
+      - condition: has_pregnant == true
+        field: per_person_multiplier
+        operator: add
+        value: 1.0
+        reason: "Prenatal vitamins required separately for pregnant persons"
+
+  # ── MEDICAL ────────────────────────────────────────────────
+  - id: medical_first_aid_kit
+    category: medical
+    label: "First Aid Kit"
+    description: "Complete kit with bandages, antiseptic, gauze, scissors, etc."
+    unit: items
+    unit_label: "kits"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 3
+    rounding: ceil
+    tags: [critical, flat_quantity]
+    special_case_overrides:
+      - condition: group_size >= 6
+        field: base_qty
+        operator: set
+        value: 2
+        reason: "Groups of 6+ should have 2 first aid kits"
+
+  - id: medical_prescription_medications
+    category: medical
+    label: "Prescription Medications"
+    description: "Personal prescription drugs — minimum 30-day emergency supply"
+    unit: days_supply
+    unit_label: "days"
+    base_qty: 30                      # minimum 30 days per person with prescriptions
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 30
+    max_total: 90
+    rounding: ceil
+    tags: [critical, personal, conditional]
+    conditional_on: "has_prescription_medications == true"
+    special_case_overrides:
+      - condition: has_medical_condition_chronic == true
+        field: base_qty
+        operator: set
+        value: 60
+        reason: "Chronic conditions warrant 60-day emergency stock"
+
+  - id: medical_pain_reliever
+    category: medical
+    label: "Pain Reliever (e.g., Ibuprofen/Paracetamol)"
+    description: "OTC analgesic/antipyretic tablets"
+    unit: tablets
+    unit_label: "tablets"
+    base_qty: 20
+    per_person_multiplier: 10.0
+    duration_multiplier: 0.1          # light usage assumption
+    duration_unit: days
+    min_total: 40
+    max_total: 200
+    rounding: ceil
+    tags: [medical, otc]
+    special_case_overrides:
+      - condition: has_elderly == true
+        field: base_qty
+        operator: add
+        value: 20
+        reason: "Elderly members often require more analgesics"
+
+  - id: medical_antiseptic
+    category: medical
+    label: "Antiseptic Solution / Alcohol Gel"
+    description: "Wound cleaning and hand hygiene"
+    unit: litres
+    unit_label: "L"
+    base_qty: 0.5
+    per_person_multiplier: 0.1
+    duration_multiplier: 0.05
+    duration_unit: days
+    min_total: 0.5
+    max_total: 3.0
+    rounding: two_decimal
+    tags: [medical, hygiene]
+    special_case_overrides: []
+
+  - id: medical_bandages
+    category: medical
+    label: "Bandages & Gauze Rolls"
+    description: "Sterile dressings for wounds"
+    unit: rolls
+    unit_label: "rolls"
+    base_qty: 5
+    per_person_multiplier: 2.0
+    duration_multiplier: 0.05
+    duration_unit: days
+    min_total: 10
+    max_total: null
+    rounding: ceil
+    tags: [medical]
+    special_case_overrides:
+      - condition: has_children == true
+        field: per_person_multiplier
+        operator: multiply
+        value: 1.5
+        reason: "Children are more prone to minor injuries"
+
+  - id: medical_tourniquet
+    category: medical
+    label: "Tourniquet (CAT or similar)"
+    description: "Life-saving haemorrhage control device"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0.25       # 1 per 4 people
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 4
+    rounding: ceil
+    tags: [medical, critical, flat_quantity]
+    special_case_overrides: []
+
+  - id: medical_thermometer
+    category: medical
+    label: "Digital Thermometer"
+    description: "Non-contact or oral thermometer"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 2
+    rounding: ceil
+    tags: [medical, flat_quantity]
+    special_case_overrides: []
+
+  # ── SANITATION ──────────────────────────────────────────────
+  - id: sanitation_toilet_paper
+    category: sanitation
+    label: "Toilet Paper"
+    description: "Standard toilet rolls"
+    unit: rolls
+    unit_label: "rolls"
+    base_qty: 0
+    per_person_multiplier: 0.5        # ~1 roll per person per 2 days
+    duration_multiplier: 1.0
+    duration_unit: days
+    min_total: 4
+    max_total: null
+    rounding: ceil
+    tags: [hygiene, daily_use]
+    special_case_overrides:
+      - condition: has_infant == true
+        field: base_qty
+        operator: add
+        value: 2
+        reason: "Infants require extra wipes/paper for diaper changes"
+
+  - id: sanitation_soap
+    category: sanitation
+    label: "Bar Soap / Liquid Soap"
+    description: "Personal hygiene and handwashing"
+    unit: items
+    unit_label: "bars (equiv)"
+    base_qty: 1
+    per_person_multiplier: 0.3        # ~1 bar per person per 10 days
+    duration_multiplier: 0.1
+    duration_unit: days
+    min_total: 2
+    max_total: null
+    rounding: ceil
+    tags: [hygiene]
+    special_case_overrides: []
+
+  - id: sanitation_feminine_hygiene
+    category: sanitation
+    label: "Feminine Hygiene Products"
+    description: "Menstrual pads, tampons, or menstrual cup"
+    unit: items
+    unit_label: "units"
+    base_qty: 0
+    per_person_multiplier: 20         # ~20 units/person/month
+    duration_multiplier: 0.033        # monthly rate → daily
+    duration_unit: days
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [hygiene, conditional, personal]
+    conditional_on: "has_menstruating_persons == true"
+    special_case_overrides: []
+
+  - id: sanitation_diapers
+    category: sanitation
+    label: "Diapers (Nappies)"
+    description: "Disposable diapers for infants/toddlers"
+    unit: items
+    unit_label: "diapers"
+    base_qty: 0
+    per_person_multiplier: 6          # ~6 diapers/infant/day
+    duration_multiplier: 1.0
+    duration_unit: days
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [hygiene, conditional, infant]
+    conditional_on: "has_infant == true"
+    special_case_overrides:
+      - condition: infant_age_months < 3
+        field: per_person_multiplier
+        operator: set
+        value: 10
+        reason: "Newborns (< 3 months) require up to 10 diaper changes/day"
+
+  - id: sanitation_hand_sanitizer
+    category: sanitation
+    label: "Hand Sanitizer (≥60% alcohol)"
+    description: "Portable hand disinfection when water unavailable"
+    unit: litres
+    unit_label: "L"
+    base_qty: 0.3
+    per_person_multiplier: 0.1
+    duration_multiplier: 0.02
+    duration_unit: days
+    min_total: 0.3
+    max_total: 2.0
+    rounding: two_decimal
+    tags: [hygiene, medical]
+    special_case_overrides: []
+
+  - id: sanitation_garbage_bags
+    category: sanitation
+    label: "Heavy-Duty Garbage Bags"
+    description: "Waste management, improvised sanitation, waterproofing"
+    unit: items
+    unit_label: "bags"
+    base_qty: 10
+    per_person_multiplier: 1.0
+    duration_multiplier: 0.2
+    duration_unit: days
+    min_total: 10
+    max_total: 100
+    rounding: ceil
+    tags: [hygiene, multi_use]
+    special_case_overrides: []
+
+  # ── SHELTER & WARMTH ────────────────────────────────────────
+  - id: shelter_sleeping_bag
+    category: shelter
+    label: "Sleeping Bag (≥ 3-season)"
+    description: "Thermal sleeping bag per person"
+    unit: items
+    unit_label: "units"
+    base_qty: 0
+    per_person_multiplier: 1.0        # 1 per person
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: null
+    rounding: ceil
+    tags: [shelter, flat_quantity]
+    special_case_overrides:
+      - condition: climate == "cold"
+        field: tags
+        operator: add_tag
+        value: "winter_rated_required"
+        reason: "Cold climate requires winter-rated (0°C or below) sleeping bags"
+
+  - id: shelter_emergency_blanket
+    category: shelter
+    label: "Emergency Thermal Blanket (Mylar)"
+    description: "Space/Mylar blankets for heat retention"
+    unit: items
+    unit_label: "units"
+    base_qty: 2
+    per_person_multiplier: 1.0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 2
+    max_total: null
+    rounding: ceil
+    tags: [shelter, flat_quantity, emergency]
+    special_case_overrides: []
+
+  - id: shelter_tent
+    category: shelter
+    label: "Emergency Tent / Tarp Shelter"
+    description: "Portable shelter for evacuation scenarios"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 2
+    rounding: ceil
+    tags: [shelter, flat_quantity, evacuation]
+    special_case_overrides:
+      - condition: group_size >= 5
+        field: base_qty
+        operator: set
+        value: 2
+        reason: "Groups of 5+ need 2 tents for adequate shelter"
+
+  - id: shelter_candles
+    category: shelter
+    label: "Emergency Candles"
+    description: "Long-burn candles for light and supplemental heat"
+    unit: items
+    unit_label: "candles"
+    base_qty: 5
+    per_person_multiplier: 0.5
+    duration_multiplier: 0.3
+    duration_unit: days
+    min_total: 5
+    max_total: 50
+    rounding: ceil
+    tags: [shelter, light]
+    special_case_overrides: []
+
+  - id: shelter_duct_tape
+    category: shelter
+    label: "Duct Tape / Gaffer Tape"
+    description: "Emergency repairs, sealing, multi-purpose"
+    unit: rolls
+    unit_label: "rolls"
+    base_qty: 2
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 2
+    max_total: 5
+    rounding: ceil
+    tags: [shelter, tools, flat_quantity]
+    special_case_overrides: []
+
+  # ── COMMUNICATION ───────────────────────────────────────────
+  - id: comm_hand_crank_radio
+    category: communication
+    label: "Hand-Crank / Solar Emergency Radio"
+    description: "AM/FM/SW radio for emergency broadcasts without power grid"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 2
+    rounding: ceil
+    tags: [communication, critical, flat_quantity]
+    special_case_overrides: []
+
+  - id: comm_walkie_talkie
+    category: communication
+    label: "Walkie-Talkie / Two-Way Radio"
+    description: "Short-range radio communication within group"
+    unit: items
+    unit_label: "pairs"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 2
+    rounding: ceil
+    tags: [communication, group]
+    special_case_overrides:
+      - condition: group_size >= 4
+        field: base_qty
+        operator: set
+        value: 2
+        reason: "Larger groups benefit from multiple walkie-talkie pairs"
+
+  - id: comm_local_emergency_plan
+    category: communication
+    label: "Printed Local Emergency Contact List"
+    description: "Hard-copy contact list: family, neighbours, emergency services"
+    unit: items
+    unit_label: "copies"
+    base_qty: 2
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 2
+    max_total: 5
+    rounding: ceil
+    tags: [communication, documents, flat_quantity]
+    special_case_overrides: []
+
+  - id: comm_whistle
+    category: communication
+    label: "Emergency Whistle"
+    description: "Signalling device for location in rubble/dark"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0.5        # 1 per 2 people
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: null
+    rounding: ceil
+    tags: [communication, signalling, flat_quantity]
+    special_case_overrides: []
+
+  # ── POWER & LIGHT ───────────────────────────────────────────
+  - id: power_flashlight
+    category: power
+    label: "LED Flashlight"
+    description: "Reliable torch with spare batteries"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0.5        # 1 per 2 people
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: null
+    rounding: ceil
+    tags: [power, light, flat_quantity]
+    special_case_overrides: []
+
+  - id: power_batteries_aa
+    category: power
+    label: "AA Batteries"
+    description: "Standard AA batteries for devices"
+    unit: items
+    unit_label: "batteries"
+    base_qty: 8
+    per_person_multiplier: 2.0
+    duration_multiplier: 0.3
+    duration_unit: days
+    min_total: 8
+    max_total: null
+    rounding: ceil
+    tags: [power]
+    special_case_overrides: []
+
+  - id: power_batteries_aaa
+    category: power
+    label: "AAA Batteries"
+    description: "Standard AAA batteries for small devices"
+    unit: items
+    unit_label: "batteries"
+    base_qty: 8
+    per_person_multiplier: 1.0
+    duration_multiplier: 0.2
+    duration_unit: days
+    min_total: 8
+    max_total: null
+    rounding: ceil
+    tags: [power]
+    special_case_overrides: []
+
+  - id: power_portable_charger
+    category: power
+    label: "Portable Power Bank (≥ 20,000mAh)"
+    description: "USB power bank for phone/device charging"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0.25       # 1 per 4 people as floor
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 4
+    rounding: ceil
+    tags: [power, communication, flat_quantity]
+    special_case_overrides: []
+
+  - id: power_solar_charger
+    category: power
+    label: "Portable Solar Panel Charger"
+    description: "Solar charging panel for renewable power"
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 2
+    rounding: ceil
+    tags: [power, flat_quantity, renewable]
+    special_case_overrides:
+      - condition: duration_days >= 14
+        field: base_qty
+        operator: set
+        value: 2
+        reason: "Long-duration scenarios (2+ weeks) warrant 2 solar panels"
+
+  - id: power_generator_fuel
+    category: power
+    label: "Generator Fuel (petrol/diesel)"
+    description: "Fuel for portable generator — litres"
+    unit: litres
+    unit_label: "L"
+    base_qty: 0
+    per_person_multiplier: 0
+    duration_multiplier: 2.0          # ~2L/day of light generator use
+    duration_unit: days
+    min_total: 0
+    max_total: 100
+    rounding: ceil
+    tags: [power, conditional]
+    conditional_on: "has_generator == true"
+    special_case_overrides: []
+
+  # ── DOCUMENTS & FINANCIAL ──────────────────────────────────
+  - id: docs_id_copies
+    category: documents
+    label: "Identity Document Copies"
+    description: "Waterproof copies of passports, IDs, medical cards, insurance"
+    unit: sets
+    unit_label: "sets"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 3
+    rounding: ceil
+    tags: [documents, critical, flat_quantity]
+    special_case_overrides:
+      - condition: group_size > 1
+        field: base_qty
+        operator: set
+        value: 2
+        reason: "Groups should keep 2 sets of document copies in separate bags"
+
+  - id: docs_emergency_cash
+    category: documents
+    label: "Emergency Cash (local currency)"
+    description: "Physical cash when electronic payment systems fail"
+    unit: currency_units
+    unit_label: "units (local)"
+    base_qty: 200
+    per_person_multiplier: 50.0       # 50 units per person
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 200
+    max_total: null
+    rounding: none
+    tags: [documents, financial, flat_quantity]
+    notes: "Adjust currency units to local denomination. EUR/USD reference."
+    special_case_overrides:
+      - condition: duration_days >= 14
+        field: base_qty
+        operator: multiply
+        value: 1.5
+        reason: "Extended scenarios require more cash reserves"
+
+  # ── TOOLS & EQUIPMENT ──────────────────────────────────────
+  - id: tools_multi_tool
+    category: tools
+    label: "Multi-Tool / Swiss Army Knife"
+    description: "Versatile tool with knife, pliers, screwdriver, etc."
+    unit: items
+    unit_label: "units"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 2
+    rounding: ceil
+    tags: [tools, flat_quantity]
+    special_case_overrides: []
+
+  - id: tools_fire_starter
+    category: tools
+    label: "Fire Starter Kit"
+    description: "Waterproof matches, lighters, and ferro rod"
+    unit: items
+    unit_label: "sets"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 3
+    rounding: ceil
+    tags: [tools, shelter, cooking, flat_quantity]
+    special_case_overrides: []
+
+  - id: tools_rope_paracord
+    category: tools
+    label: "Paracord / Rope"
+    description: "Multi-use 550 paracord, 30+ meters"
+    unit: metres
+    unit_label: "m"
+    base_qty: 30
+    per_person_multiplier: 5.0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 30
+    max_total: null
+    rounding: ceil
+    tags: [tools, flat_quantity]
+    special_case_overrides: []
+
+  - id: tools_map_compass
+    category: tools
+    label: "Paper Map + Compass"
+    description: "Physical topographic map and magnetic compass for navigation"
+    unit: items
+    unit_label: "sets"
+    base_qty: 1
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: 2
+    rounding: ceil
+    tags: [tools, navigation, flat_quantity]
+    special_case_overrides: []
+
+  - id: tools_gloves_work
+    category: tools
+    label: "Heavy-Duty Work Gloves"
+    description: "Protection for debris handling and heavy work"
+    unit: pairs
+    unit_label: "pairs"
+    base_qty: 1
+    per_person_multiplier: 0.5        # 1 pair per 2 adults
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: null
+    rounding: ceil
+    tags: [tools, protective, flat_quantity]
+    special_case_overrides: []
+
+  # ── CLOTHING ───────────────────────────────────────────────
+  - id: clothing_change_of_clothes
+    category: clothing
+    label: "Change of Clothes (3-day minimum)"
+    description: "Per-person: 3 days of weather-appropriate clothing in bug-out bag"
+    unit: days_worth
+    unit_label: "days per person"
+    base_qty: 0
+    per_person_multiplier: 3.0        # 3 days per person
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 3
+    max_total: null
+    rounding: ceil
+    tags: [clothing, evacuation]
+    special_case_overrides:
+      - condition: climate == "cold"
+        field: per_person_multiplier
+        operator: set
+        value: 5
+        reason: "Cold climates require layering — 5 days of thermal clothing recommended"
+
+  - id: clothing_rain_gear
+    category: clothing
+    label: "Rain Poncho / Waterproof Jacket"
+    description: "Waterproof outer layer per person"
+    unit: items
+    unit_label: "units"
+    base_qty: 0
+    per_person_multiplier: 1.0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: null
+    rounding: ceil
+    tags: [clothing, flat_quantity]
+    special_case_overrides: []
+
+  - id: clothing_sturdy_footwear
+    category: clothing
+    label: "Sturdy Closed-Toe Footwear"
+    description: "Walking boots or sturdy trainers per person"
+    unit: pairs
+    unit_label: "pairs"
+    base_qty: 0
+    per_person_multiplier: 1.0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 1
+    max_total: null
+    rounding: ceil
+    tags: [clothing, flat_quantity]
+    special_case_overrides: []
+
+  # ── SPECIAL NEEDS ───────────────────────────────────────────
+  - id: special_elderly_mobility_aids
+    category: special_needs
+    label: "Mobility Aids (crutches/walker/wheelchair)"
+    description: "Ensure spare or backup mobility equipment for elderly/mobility-limited"
+    unit: items
+    unit_label: "units"
+    base_qty: 0
+    per_person_multiplier: 1.0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [special_needs, conditional, elderly]
+    conditional_on: "has_mobility_limited == true"
+    special_case_overrides: []
+
+  - id: special_glasses_spare
+    category: special_needs
+    label: "Spare Eyeglasses / Contact Lens Supply"
+    description: "Backup glasses or 30+ day contact lens supply"
+    unit: items
+    unit_label: "units"
+    base_qty: 0
+    per_person_multiplier: 1.0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [special_needs, conditional, personal]
+    conditional_on: "has_vision_correction == true"
+    special_case_overrides: []
+
+  - id: special_hearing_aid_batteries
+    category: special_needs
+    label: "Hearing Aid Batteries"
+    description: "Backup batteries for hearing aids"
+    unit: items
+    unit_label: "battery packs"
+    base_qty: 0
+    per_person_multiplier: 4.0        # 4 packs per hearing aid user
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [special_needs, conditional, personal]
+    conditional_on: "has_hearing_impaired == true"
+    special_case_overrides: []
+
+  # ── PETS ───────────────────────────────────────────────────
+  - id: pets_food
+    category: pets
+    label: "Pet Food"
+    description: "Dry/canned food supply for pets"
+    unit: kg
+    unit_label: "kg"
+    base_qty: 0
+    per_person_multiplier: 0.3        # ~300g/day per average pet
+    duration_multiplier: 1.0
+    duration_unit: days
+    min_total: 0
+    max_total: null
+    rounding: two_decimal
+    tags: [pets, conditional]
+    conditional_on: "has_pets == true"
+    special_case_overrides:
+      - condition: pet_type == "large_dog"
+        field: per_person_multiplier
+        operator: set
+        value: 0.6
+        reason: "Large dogs require ~600g/day of food"
+
+  - id: pets_water
+    category: pets
+    label: "Pet Water"
+    description: "Fresh water supply for pets"
+    unit: litres
+    unit_label: "L"
+    base_qty: 0
+    per_person_multiplier: 0.5        # ~500ml/day per average pet
+    duration_multiplier: 1.0
+    duration_unit: days
+    min_total: 0
+    max_total: null
+    rounding: two_decimal
+    tags: [pets, conditional]
+    conditional_on: "has_pets == true"
+    special_case_overrides: []
+
+  - id: pets_carrier
+    category: pets
+    label: "Pet Carrier / Crate"
+    description: "Transport container for pets during evacuation"
+    unit: items
+    unit_label: "units"
+    base_qty: 0
+    per_person_multiplier: 1.0        # 1 per pet
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [pets, conditional, evacuation]
+    conditional_on: "has_pets == true"
+    special_case_overrides: []
+
+  - id: pets_medications
+    category: pets
+    label: "Pet Medications"
+    description: "30-day supply of any regular pet prescriptions"
+    unit: days_supply
+    unit_label: "days"
+    base_qty: 30
+    per_person_multiplier: 0
+    duration_multiplier: 0
+    duration_unit: days
+    flat_override: true
+    min_total: 0
+    max_total: null
+    rounding: ceil
+    tags: [pets, conditional, medical]
+    conditional_on: "has_pets_on_medication == true"
+    special_case_overrides: []
+
+# ----------------------
+# GLOBAL OVERRIDE RULES
+# ----------------------
+# Applied after all item formulas resolve — cross-cutting rules
+global_overrides:
+  - id: conflict_zone_multiplier
+    description: "Active conflict zone multiplies all critical items by 1.5"
+    condition: "regional_threat_level >= 8"
+    affected_categories: [water, food, medical]
+    operator: multiply
+    value: 1.5
+
+  - id: urban_shelter_in_place
+    description: "Urban shelter-in-place scenario extends duration floor"
+    condition: "scenario_type == 'shelter_in_place' AND location_type == 'urban'"
+    affected_items: [water_drinking, food_nonperishable_calories]
+    operator: set_min_duration_days
+    value: 14
+
+  - id: evacuation_bag_weight_limit
+    description: "Evacuation scenario caps per-person carry weight at 20kg"
+    condition: "scenario_type == 'evacuation'"
+    operator: apply_weight_limit_kg
+    value: 20
+    priority_order_by: category_priority  # drop lowest priority first
+
+# ----------------------
+# FORMULA RESOLVER RULES
+# ----------------------
+formula_resolution_order:
+  1: "Apply flat_override items (ignore duration)"
+  2: "Apply conditional_on gate — skip item if condition false"
+  3: "Compute: raw_qty = base_qty + (per_person_multiplier * group_size)"
+  4: "If not flat_override: raw_qty = raw_qty * duration_multiplier * duration_days"
+  5: "Apply special_case_overrides in order (set → add → multiply)"
+  6: "Apply min_total clamp (max(raw_qty, min_total))"
+  7: "Apply max_total clamp if set (min(raw_qty, max_total))"
+  8: "Apply rounding rule (ceil | floor | round | two_decimal | none)"
+  9: "Apply global_overrides"
+  10: "Return resolved_qty with unit and label"

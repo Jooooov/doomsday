@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --border: #222222;
+  --text: #f0f0f0;
+  --muted: #888888;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+@keyframes tick {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-2deg); }
+}
+
+@keyframes pulse-red {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+
+.clock-hand { animation: tick 2s ease-in-out infinite; transform-origin: bottom center; }
+.risk-red-pulse { animation: pulse-red 2s ease-in-out infinite; }
+
+.leaflet-container { background: #1a1a1a; }
+
+.disclaimer {
+  font-size: 0.75rem;
+  color: var(--muted);
+  border-left: 2px solid var(--border);
+  padding-left: 0.75rem;
+}

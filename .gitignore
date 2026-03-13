@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+!.env.example
+venv/
+.venv/
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# DB / data
+*.db
+*.sqlite3
+data/geoip/
