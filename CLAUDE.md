@@ -47,6 +47,8 @@ docker compose up          # starts backend (8000) + frontend (3000) + postgres
 Frontend runs in **dev mode** inside Docker with hot-reload via volume mounts.
 `npm run build` on host fails (Node 25 incompatibility) — always build inside container.
 
+> **Note:** `docker-compose.yml` and `docker-compose.prod.yml` are written in JSON format (JSON is valid YAML — Docker Compose parses them transparently). All `docker compose` commands remain unchanged.
+
 ## Key Patterns
 
 ### Guide Generation
